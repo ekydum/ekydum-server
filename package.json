@@ -1,0 +1,29 @@
+{
+  "name": "ekydum-server",
+  "version": "1.0.0",
+  "description": "YouTube proxy server",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "NODE_ENV=development node src/server.js"
+  },
+  "keywords": [
+    "youtube",
+    "proxy",
+    "yt-dlp"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.1",
+    "sequelize": "^6.37.5",
+    "sequelize-cli": "^6.6.2",
+    "umzug": "^3.8.1",
+    "pg": "^8.13.1",
+    "pg-hstore": "^2.3.4",
+    "ioredis": "^5.4.1",
+    "joi": "^17.13.3",
+    "uuid": "^11.0.3"
+  }
+}
