@@ -1,4 +1,5 @@
 var express = require('express');
+var cors = require('cors');
 var redis = require('./config/redis');
 var sequelize = require('./config/database');
 var errorHandler = require('./middleware/error-handler');
@@ -13,6 +14,13 @@ var meRoutes = require('./routes/me');
 var app = express();
 
 // Middleware
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['content-type', 'x-admin-token', 'x-account-token'],
+  credentials: true,
+  maxAge: 86400,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
