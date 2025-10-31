@@ -8,7 +8,7 @@ var CacheService = {
     CHANNEL_VIDEOS: 1800,      // 30 minutes
     CHANNEL_SEARCH: 3600,      // 1 hour
     VIDEO_URL: 21600,          // 6 hours
-    VIDEO_INFO: 3600           // 1 hour
+    VIDEO_INFO: 3600 * 24      // 1 day
   },
 
   // Generate hash for search query

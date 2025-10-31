@@ -1,76 +1,10 @@
-var { exec } = require('child_process');
-var { promisify } = require('util');
 var CacheService = require('./cache-service');
-
-var execAsync = promisify(exec);
+const { spawn } = require("child_process");
 
 var YtdlpService = {
-  // Quality mapping for yt-dlp format selection
-  QUALITY_MAP: {
-    'min': 'worst',
-    '360p': 'bestvideo[height<=360]+bestaudio/best[height<=360]',
-    '480p': 'bestvideo[height<=480]+bestaudio/best[height<=480]',
-    '720p': 'bestvideo[height<=720]+bestaudio/best[height<=720]',
-    '1080p': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]',
-    '2k': 'bestvideo[height<=1440]+bestaudio/best[height<=1440]',
-    '4k': 'bestvideo[height<=2160]+bestaudio/best[height<=2160]',
-    'max': 'best'
-  },
+  YT_BASE_URL: 'https://www.youtube.com',
 
-  // Execute yt-dlp command
-  executeYtDlp: async function(args) {
-    try {
-      var { spawn } = require('child_process');
-
-      return new Promise(function(resolve, reject) {
-        var ytdlp = spawn('yt-dlp', args, {
-          maxBuffer: 1024 * 1024 * 10
-        });
-
-        var stdout = '';
-        var stderr = '';
-
-        ytdlp.stdout.on('data', function(data) {
-          stdout += data.toString();
-        });
-
-        ytdlp.stderr.on('data', function(data) {
-          stderr += data.toString();
-        });
-
-        ytdlp.on('close', function(code) {
-          if (code !== 0 && stderr.includes('ERROR')) {
-            reject(new Error(stderr));
-          } else {
-            resolve(stdout);
-          }
-        });
-
-        ytdlp.on('error', function(error) {
-          reject(new Error('Failed to execute yt-dlp: ' + error.message));
-        });
-      });
-    } catch (error) {
-      console.error('yt-dlp error:', error.message);
-      throw new Error('Failed to execute yt-dlp: ' + error.message);
-    }
-  },
-
-  // Parse JSON output from yt-dlp
-  parseJsonOutput: function(output) {
-    try {
-      var lines = output.trim().split('\n');
-      return lines.map(function(line) {
-        return JSON.parse(line);
-      });
-    } catch (error) {
-      throw new Error('Failed to parse yt-dlp output');
-    }
-  },
-
-  // Search channels
   searchChannels: async function(query) {
-    console.log('search channels: ', query);
     var cacheKey = CacheService.keys.channelSearch(query);
     var cached = await CacheService.get(cacheKey);
 
@@ -78,15 +12,14 @@ var YtdlpService = {
       return cached;
     }
 
-    var args = [
-      '--dump-json',
-      '--flat-playlist',
-      '--playlist-end', '10',
-      'ytsearch10:' + query
-    ];
-
-    var output = await this.executeYtDlp(args);
-    var results = this.parseJsonOutput(output);
+    var results = this._parseJsonOutput(
+      await this._executeYtDlp([
+        '--dump-json',
+        '--flat-playlist',
+        '--playlist-end', '10',
+        'ytsearch10:' + query
+      ])
+    );
 
     var channels = results
       .filter(function(item) {
@@ -116,7 +49,6 @@ var YtdlpService = {
     return uniqueChannels;
   },
 
-  // Get channel info
   getChannelInfo: async function(ytChannelId) {
     var cacheKey = CacheService.keys.channelInfo(ytChannelId);
     var cached = await CacheService.get(cacheKey);
@@ -125,15 +57,13 @@ var YtdlpService = {
       return cached;
     }
 
-    var channelUrl = 'https://www.youtube.com/channel/' + ytChannelId;
-    var args = [
-      '--dump-json',
-      '--playlist-end', '1',
-      channelUrl
-    ];
-
-    var output = await this.executeYtDlp(args);
-    var results = this.parseJsonOutput(output);
+    var results = this._parseJsonOutput(
+      await this._executeYtDlp([
+        '--dump-json',
+        '--playlist-end', '1',
+        this.YT_BASE_URL + '/channel/' + ytChannelId
+      ])
+    );
 
     if (results.length === 0) {
       throw new Error('Channel not found');
@@ -155,7 +85,6 @@ var YtdlpService = {
     return channelInfo;
   },
 
-  // Get channel videos
   getChannelVideos: async function(ytChannelId, page, pageSize) {
     var cacheKey = CacheService.keys.channelVideos(ytChannelId, page, pageSize);
     var cached = await CacheService.get(cacheKey);
@@ -164,20 +93,15 @@ var YtdlpService = {
       return cached;
     }
 
-    var channelUrl = 'https://www.youtube.com/channel/' + ytChannelId + '/videos';
-    var playlistStart = (page - 1) * pageSize + 1;
-    var playlistEnd = page * pageSize;
-
-    var args = [
-      '--dump-json',
-      '--flat-playlist',
-      '--playlist-start', playlistStart.toString(),
-      '--playlist-end', playlistEnd.toString(),
-      channelUrl
-    ];
-
-    var output = await this.executeYtDlp(args);
-    var results = this.parseJsonOutput(output);
+    var results = this._parseJsonOutput(
+      await this._executeYtDlp([
+        '--dump-json',
+        '--flat-playlist',
+        '--playlist-start', ((page - 1) * pageSize + 1).toString(),
+        '--playlist-end', (page * pageSize).toString(),
+        this.YT_BASE_URL + '/channel/' + ytChannelId + '/videos'
+      ])
+    );
 
     var videos = results.map(function(item) {
       return {
@@ -210,7 +134,6 @@ var YtdlpService = {
     return result;
   },
 
-  // Get video info
   getVideoInfo: async function(ytVideoId) {
     var cacheKey = CacheService.keys.videoInfo(ytVideoId);
     var cached = await CacheService.get(cacheKey);
@@ -219,39 +142,26 @@ var YtdlpService = {
       return cached;
     }
 
-    var videoUrl = 'https://www.youtube.com/watch?v=' + ytVideoId;
-    var args = [
-      '--dump-json',
-      videoUrl
-    ];
+    var videoInfo = this._parseJsonOutput(
+      await this._executeYtDlp([
+        '--dump-json',
+        '--no-playlist',
+        '--prefer-free-formats',
+        '--no-check-certificate',
+        this.YT_BASE_URL + '/watch?v=' + ytVideoId,
+      ])
+    )?.[0];
 
-    var output = await this.executeYtDlp(args);
-    var results = this.parseJsonOutput(output);
-
-    if (results.length === 0) {
+    if (!videoInfo?.id) {
       throw new Error('Video not found');
     }
 
-    var data = results[0];
-    var videoInfo = {
-      yt_id: ytVideoId,
-      title: data.title,
-      description: data.description || '',
-      thumbnail: data.thumbnail,
-      duration: data.duration || 0,
-      view_count: data.view_count || 0,
-      upload_date: data.upload_date ?
-        data.upload_date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') :
-        null,
-      channel_id: data.channel_id,
-      channel_name: data.channel || data.uploader || 'Unknown'
-    };
-
     await CacheService.set(cacheKey, videoInfo, CacheService.TTL.VIDEO_INFO);
+
     return videoInfo;
   },
 
-  // Get video stream URL
+  /** @deprecated - extract streams on client from video info */
   getVideoStreamUrl: async function(ytVideoId, quality) {
     var cacheKey = CacheService.keys.videoUrl(ytVideoId, quality);
     var cached = await CacheService.get(cacheKey);
@@ -260,16 +170,16 @@ var YtdlpService = {
       return cached;
     }
 
-    var videoUrl = 'https://www.youtube.com/watch?v=' + ytVideoId;
-    var format = this.QUALITY_MAP[quality] || this.QUALITY_MAP['720p'];
+    var videoUrl = this.YT_BASE_URL + '/watch?v=' + ytVideoId;
+    // var format = this.QUALITY_MAP[quality] || this.QUALITY_MAP['720p'];
 
     var args = [
-      '-f', format,
+      // '-f', format,
       '-g',
       videoUrl
     ];
 
-    var output = await this.executeYtDlp(args);
+    var output = await this._executeYtDlp(args);
     var url = output.trim().split('\n')[0];
 
     var result = {
@@ -280,7 +190,54 @@ var YtdlpService = {
 
     await CacheService.set(cacheKey, result, CacheService.TTL.VIDEO_URL);
     return result;
-  }
+  },
+
+  _executeYtDlp: async function(args) {
+    try {
+      return new Promise(function(resolve, reject) {
+        var ytdlp = spawn('yt-dlp', args, {
+          maxBuffer: 1024 * 1024 * 10
+        });
+
+        var stdout = '',
+            stderr = '';
+
+        ytdlp.stdout.on('data', function(data) {
+          stdout += data.toString();
+        });
+
+        ytdlp.stderr.on('data', function(data) {
+          stderr += data.toString();
+        });
+
+        ytdlp.on('close', function(code) {
+          if (code !== 0 && stderr.includes('ERROR')) {
+            reject(new Error(stderr));
+          } else {
+            resolve(stdout);
+          }
+        });
+
+        ytdlp.on('error', function(error) {
+          reject(new Error('Failed to execute yt-dlp: ' + error.message));
+        });
+      });
+    } catch (error) {
+      console.error('yt-dlp error:', error.message);
+      throw new Error('Failed to execute yt-dlp: ' + error.message);
+    }
+  },
+
+  _parseJsonOutput: function(output) {
+    try {
+      var lines = output.trim().split('\n');
+      return lines.map(function(line) {
+        return JSON.parse(line);
+      });
+    } catch (error) {
+      throw new Error('Failed to parse yt-dlp output');
+    }
+  },
 };
 
 module.exports = YtdlpService;
