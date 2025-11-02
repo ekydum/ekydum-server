@@ -7,8 +7,7 @@ var CacheService = {
     CHANNEL_INFO: 3600,        // 1 hour
     CHANNEL_VIDEOS: 1800,      // 30 minutes
     CHANNEL_SEARCH: 3600,      // 1 hour
-    VIDEO_URL: 21600,          // 6 hours
-    VIDEO_INFO: 3600 * 24      // 1 day
+    VIDEO_INFO: 3600 * 5       // 5 hours
   },
 
   // Generate hash for search query
@@ -59,9 +58,6 @@ var CacheService = {
     },
     channelSearch: function(query) {
       return 'channel:search:' + CacheService.hashQuery(query);
-    },
-    videoUrl: function(videoId, quality) {
-      return 'video:url:' + videoId + ':' + quality;
     },
     videoInfo: function(videoId) {
       return 'video:info:' + videoId;

@@ -161,37 +161,6 @@ var YtdlpService = {
     return videoInfo;
   },
 
-  /** @deprecated - extract streams on client from video info */
-  getVideoStreamUrl: async function(ytVideoId, quality) {
-    var cacheKey = CacheService.keys.videoUrl(ytVideoId, quality);
-    var cached = await CacheService.get(cacheKey);
-
-    if (cached) {
-      return cached;
-    }
-
-    var videoUrl = this.YT_BASE_URL + '/watch?v=' + ytVideoId;
-    // var format = this.QUALITY_MAP[quality] || this.QUALITY_MAP['720p'];
-
-    var args = [
-      // '-f', format,
-      '-g',
-      videoUrl
-    ];
-
-    var output = await this._executeYtDlp(args);
-    var url = output.trim().split('\n')[0];
-
-    var result = {
-      url: url,
-      quality: quality,
-      expires_at: Math.floor(Date.now() / 1000) + CacheService.TTL.VIDEO_URL
-    };
-
-    await CacheService.set(cacheKey, result, CacheService.TTL.VIDEO_URL);
-    return result;
-  },
-
   _executeYtDlp: async function(args) {
     try {
       return new Promise(function(resolve, reject) {

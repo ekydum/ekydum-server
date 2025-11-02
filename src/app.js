@@ -1,64 +1,38 @@
 var express = require('express');
 var cors = require('cors');
-var redis = require('./config/redis');
-var sequelize = require('./config/database');
 var errorHandler = require('./middleware/error-handler');
 var pkg = require('../package.json');
+var systemController = require('./controllers/system-controller');
 var adminRoutes = require('./routes/admin');
 var channelsRoutes = require('./routes/channels');
 var subscriptionsRoutes = require('./routes/subscriptions');
 var settingsRoutes = require('./routes/settings');
 var videosRoutes = require('./routes/videos');
 var meRoutes = require('./routes/me');
+var hlsRoutes = require('./routes/hls');
 
 var app = express();
 
-// Middleware
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['content-type', 'x-admin-token', 'x-account-token'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'],
+  allowedHeaders: ['content-type', 'x-admin-token', 'x-account-token', 'range'],
+  exposedHeaders: ['Content-Length', 'Content-Range', 'Content-Type'],
   credentials: true,
   maxAge: 86400,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/', async function (req, res) {
-  res.json({
-    server: pkg.name,
-    version: pkg.version,
-    description: pkg.description,
-    ts: new Date().getTime(),
-  });
+app.disable('x-powered-by');
+var SERVER_NAME = 'ekydum/' + pkg.version;
+app.use(function (req, res, next) {
+  res.setHeader('Server', SERVER_NAME);
+  next();
 });
 
-// Health check
-app.get('/health', async function(req, res) {
-  var health = {
-    status: 'ok',
-    db: 'ok',
-    cache: 'ok',
-    ts: new Date().getTime(),
-  };
-
-  try {
-    await sequelize.authenticate();
-  } catch (error) {
-    health.db = 'error';
-    health.status = 'error';
-  }
-
-  try {
-    await redis.ping();
-  } catch (error) {
-    health.cache = 'error';
-    health.status = 'error';
-  }
-
-  var statusCode = health.status === 'ok' ? 200 : 503;
-  res.status(statusCode).json(health);
-});
+app.get('/', systemController.getServerInfo());
+app.get('/health', systemController.getHealth());
 
 // Routes
 app.use('/admin', adminRoutes);
@@ -67,11 +41,10 @@ app.use('/subscriptions', subscriptionsRoutes);
 app.use('/settings', settingsRoutes);
 app.use('/videos', videosRoutes);
 app.use('/me', meRoutes);
+app.use('/hls', hlsRoutes);
 
 // 404 handler
-app.use(function(req, res) {
-  res.status(404).json({ error: 'NOT_FOUND' });
-});
+app.use(systemController.err404());
 
 // Error handler
 app.use(errorHandler);

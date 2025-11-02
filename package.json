@@ -15,16 +15,19 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@eyevinn/m3u8": "^0.5.9",
+    "axios": "^1.13.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.1",
+    "ioredis": "^5.4.1",
+    "joi": "^17.13.3",
+    "lodash": "^4.17.21",
+    "pg": "^8.13.1",
+    "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.5",
     "sequelize-cli": "^6.6.2",
     "umzug": "^3.8.1",
-    "pg": "^8.13.1",
-    "pg-hstore": "^2.3.4",
-    "ioredis": "^5.4.1",
-    "joi": "^17.13.3",
     "uuid": "^11.0.3"
   }
 }
