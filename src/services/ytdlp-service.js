@@ -199,12 +199,18 @@ var YtdlpService = {
 
   _parseJsonOutput: function(output) {
     try {
-      var lines = output.trim().split('\n');
-      return lines.map(function(line) {
-        return JSON.parse(line);
-      });
+      return output
+        .trim()
+        .split('\n')
+        .map(function(line) {
+          var jl = line.trim();
+          return jl.length > 0 ? JSON.parse(jl) : null;
+        })
+        .filter(function (item) {
+          return !!item;
+        });
     } catch (error) {
-      throw new Error('Failed to parse yt-dlp output');
+      throw new Error('Failed to parse yt-dlp output: ' + error.message);
     }
   },
 };
