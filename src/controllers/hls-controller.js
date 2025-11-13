@@ -13,9 +13,9 @@ var HlsController = {
         return res.status(400).json({ error: 'URL parameter required' });
       }
 
-      // if (!/\.m3u8/.test(url)) {
-      //   return res.status(400).json({ error: 'Invalid m3u8 URL' });
-      // }
+      if (!/\.m3u8/.test(url)) {
+        return res.status(400).json({ error: 'Invalid m3u8 URL' });
+      }
 
       var method = req.method.toUpperCase();
       var baseUrl = HlsController._getBaseUrl(req);
