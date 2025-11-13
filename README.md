@@ -1,11 +1,16 @@
-# ekydum-server
+# Ekydum Server
 
-YouTube proxy server using yt-dlp.
+Free media server
+
+## Features:
+
+- Server accounts management
+- YouTube library management
+- HLS CORS proxy (m3u8 manifest, segment)
 
 ## Requirements
 
 - Docker & Docker Compose
-- Admin token (min 128 characters)
 
 ## Quick Start
 
@@ -28,84 +33,19 @@ docker-compose up -d
 
 4. Server runs at `http://localhost:3000`
 
-## API Endpoints
-
-### Health Check
-- `GET /health` - Check service status
-
-### Admin Endpoints (requires `x-admin-token` header)
-
-**Account Management:**
-- `POST /admin/accounts` - Create account `{ name }`
-- `GET /admin/accounts` - List all accounts
-- `GET /admin/accounts/:id` - Get account by ID
-- `PUT /admin/accounts/:id` - Update account `{ name }`
-- `DELETE /admin/accounts/:id` - Delete account
-
-### User Endpoints (requires `x-account-token` header)
-
-**Account Info:**
-- `GET /me` - Get current account info (without token)
-
-**Channels:**
-- `POST /channels/search` - Search channels `{ q: string }`
-- `GET /channels/:yt_channel_id` - Get channel info
-- `GET /channels/:yt_channel_id/videos?page=1&page_size=40` - Get channel videos
-
-**Videos:**
-- `GET /videos/:yt_video_id` - Get video info
-- `GET /videos/:yt_video_id/stream?quality=720p` - Get stream URL
-
-**Subscriptions:**
-- `POST /subscriptions` - Subscribe `{ yt_channel_id }`
-- `GET /subscriptions` - List subscriptions
-- `DELETE /subscriptions/:id` - Unsubscribe
-
-**Settings:**
-- `GET /settings` - Get all settings
-- `PUT /settings/:key` - Update setting `{ value }`
-
-**Available Settings:**
-- `DEFAULT_QUALITY`: min, 360p, 480p, 720p (default), 1080p, 2k, 4k, max
-- `PAGE_SIZE`: 10, 20, 30, 40 (default), 50, 100, 200, 300, 500
-
-## Database
-
-PostgreSQL 17 with Sequelize migrations (auto-run on startup).
-
-**Migrations:**
-- `20250101000001-create-accounts.js` - Creates accounts table
-- `20250101000002-create-subscriptions.js` - Creates subscriptions table
-- `20250101000003-create-settings.js` - Creates settings table
-
-Migrations are automatically executed when the server starts using Umzug.
-
-**Tables:**
-- `accounts` - User accounts with tokens
-- `subscriptions` - Channel subscriptions per account
-- `settings` - User settings per account
-
-## Cache
-
-Redis 7.4 for caching yt-dlp results:
-- Channel info: 1 hour
-- Channel videos: 30 minutes
-- Search results: 1 hour
-- Video URLs: 6 hours
-- Video info: 1 hour
+Run a Ekydum client to connect to the server using your server URL and the admin token.
 
 ## Development
 
-Local development with hot reload:
-```bash
-npm install
-npm run dev
-```
+Create `docker-compose.override.yml` from example.
+Edit code...
+Restart the `app` service
+
+See [API_EXAMPLES.md](API_EXAMPLES.md)
 
 ## Architecture
 
-- Express.js 4.21
-- Sequelize ORM
-- ioredis client
-- Joi validation
-- yt-dlp for YouTube data
+- Node.js / Express.js
+- PostgreSQL / Sequelize
+- Redis / ioredis
+- yt-dlp
