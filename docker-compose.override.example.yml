@@ -1,16 +1,4 @@
-version: '3.9'
-
-# dev overrides
-
 services:
-  postgres:
-    ports:
-      - "5432:5432"
-
-  redis:
-    ports:
-      - "6379:6379"
-
   app:
-    volumes:
-      - ./src:/app/src
+    ports:
+      - "3000:3000"

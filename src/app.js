@@ -13,8 +13,11 @@ var hlsRoutes = require('./routes/hls');
 
 var app = express();
 
+var corsOrigins = (process.env.CORS_ORIGIN || '').split(',')
+  .map((o) => o.trim())
+  .filter((o) => o.length > 0);
 app.use(cors({
-  origin: '*',
+  origin: corsOrigins.length > 0 ? corsOrigins : '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'],
   allowedHeaders: ['content-type', 'x-admin-token', 'x-account-token', 'range'],
   exposedHeaders: ['Content-Length', 'Content-Range', 'Content-Type'],
@@ -27,7 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 app.disable('x-powered-by');
 var SERVER_NAME = 'ekydum/' + pkg.version;
 app.use(function (req, res, next) {
-  res.setHeader('Server', SERVER_NAME);
+  res.setHeader('Backend', SERVER_NAME);
   next();
 });
 
