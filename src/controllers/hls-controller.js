@@ -4,121 +4,126 @@ var m3u8 = require('@eyevinn/m3u8');
 var { Readable } = require('stream');
 
 var HlsController = {
+  _proxyBaseUrlCached: null,
+
   m3u8: async function (req, res) {
     try {
-      var url = req.query.url;
-      var token = req.query.token;
+      var url = req.query.url,
+          token = req.query.token;
 
       if (!url) {
-        return res.status(400).json({ error: 'URL parameter required' });
-      }
+        res.status(400).json({ error: 'URL parameter required' });
+      } else if (!/\.m3u8/.test(url)) {
+        res.status(400).json({ error: 'Invalid m3u8 URL' });
+      } else {
+        var method = req.method.toUpperCase();
 
-      if (!/\.m3u8/.test(url)) {
-        return res.status(400).json({ error: 'Invalid m3u8 URL' });
-      }
+        var { m3u, headers } = await HlsController._fetchAndParseManifest(url);
 
-      var method = req.method.toUpperCase();
-      var baseUrl = HlsController._getBaseUrl(req);
+        var allowedHeaders = [
+          'content-type',
+          'date',
+          'pragma',
+          'content-range',
+          'accept-ranges',
+          'cache-control',
+          'etag',
+          'last-modified',
+          'x-xss-protection',
+          'alt-svc',
+          'transfer-encoding'
+        ];
 
-      var { m3u, headers } = await HlsController._fetchAndParseManifest(url);
-
-      var allowedHeaders = [
-        'content-type',
-        'date',
-        'pragma',
-        'content-range',
-        'accept-ranges',
-        'cache-control',
-        'etag',
-        'last-modified',
-        'x-xss-protection',
-        'alt-svc',
-        'transfer-encoding'
-      ];
-
-      if (headers) {
-        Object.keys(headers).forEach(key => {
-          if (allowedHeaders.includes(key.toLowerCase())) {
-            res.setHeader(key, headers[key]);
-          }
-        });
-      }
-
-      res.header('content-type', 'application/vnd.apple.mpegurl');
-
-      // Vidstack requests HEAD first
-      if (method === 'HEAD') {
-        res.end();
-        return;
-      }
-
-      var wrapSeg = (segUrl) => {
-        return baseUrl + '/hls/seg?url=' + encodeURIComponent(segUrl) + '&token=' + encodeURIComponent(token);
-      };
-
-      [
-        'PlaylistItem',
-        'StreamItem',
-        'IframeStreamItem',
-        'MediaItem',
-      ].forEach((itemType) => {
-        if (m3u.items && Array.isArray(m3u.items[itemType])) {
-          m3u.items[itemType].forEach((item) => {
-            item.set('uri', wrapSeg(item.get('uri')));
+        if (headers) {
+          Object.keys(headers).forEach(key => {
+            if (allowedHeaders.includes(key.toLowerCase())) {
+              res.setHeader(key, headers[key]);
+            }
           });
         }
-      });
 
-      var manifest = m3u.toString();
+        res.header('content-type', 'application/vnd.apple.mpegurl');
 
-      res.send(manifest);
-
+        if (method === 'HEAD') {
+          res.end();
+        } else {
+          [
+            'PlaylistItem',
+            'StreamItem',
+            'IframeStreamItem',
+            'MediaItem',
+          ].forEach((itemType) => {
+            if (m3u.items && Array.isArray(m3u.items[itemType])) {
+              m3u.items[itemType].forEach((item) => {
+                item.set('uri', HlsController._wrapUrl(req, item.get('uri'), token));
+              });
+            }
+          });
+          res.send(m3u.toString());
+        }
+      }
     } catch (e) {
       res.status(500).json({ error: e + '' });
     }
   },
+
   seg: async function (req, res) {
     try {
-      var url = req.query.url;
-
+      var url = req.query.url,
+          method = req.method.toUpperCase();
       if (!url) {
-        return res.status(400).json({ error: 'URL parameter required' });
+        res.status(400).json({ error: 'URL parameter required' });
+      } else {
+        var response = await axios({
+          method,
+          url,
+          responseType: method === 'HEAD' ? 'text' : 'stream',
+          headers: _.omit(req.headers, [
+            'host',
+            'origin',
+            'referer',
+          ]),
+          validateStatus: function (status) {
+            return status >= 200 && status < 400;
+          }
+        });
+
+        res.status(response.status);
+        response.data.pipe(res);
+
+        response.data.on('error', function (err) {
+          console.error('Stream error:', err);
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Stream error' });
+          }
+        });
       }
-
-      var method = req.method.toUpperCase();
-
-      var response = await axios({
-        method,
-        url,
-        responseType: method === 'HEAD' ? 'text' : 'stream',
-        headers: _.omit(req.headers, [
-          'host',
-          'origin',
-          'referer',
-        ]),
-        validateStatus: function (status) {
-          return status >= 200 && status < 400;
-        }
-      });
-
-      res.status(response.status);
-
-      response.data.pipe(res);
-
-      response.data.on('error', function(err) {
-        console.error('Stream error:', err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Stream error' });
-        }
-      });
-
     } catch (e) {
       res.status(500).json({ error: e + '' });
     }
   },
 
   _getBaseUrl: function (req) {
-    return req.protocol + '://' + req.get('host');
+    if (!HlsController._proxyBaseUrlCached) {
+      HlsController._createBaseUrlAndCache(req);
+    }
+    return HlsController._proxyBaseUrlCached;
+  },
+
+  _createBaseUrlAndCache: function (req) {
+    HlsController._proxyBaseUrlCached = (
+      (req.get('x-forwarded-proto') || req.protocol) +
+      '://' +
+      (req.get('x-forwarded-host') || req.get('host'))
+    );
+  },
+
+  _wrapUrl: function (req, url, token) {
+    return (
+      HlsController._getBaseUrl(req) +
+      '/hls/seg?url=' + encodeURIComponent(url) +
+      '&token=' + encodeURIComponent(token)
+    );
   },
 
   _fetchAndParseManifest: async function (url) {
