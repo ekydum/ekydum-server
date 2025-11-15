@@ -10,6 +10,7 @@ var settingsRoutes = require('./routes/settings');
 var videosRoutes = require('./routes/videos');
 var meRoutes = require('./routes/me');
 var hlsRoutes = require('./routes/hls');
+var searchRoutes = require('./routes/search');
 
 var app = express();
 
@@ -38,6 +39,7 @@ app.get('/', systemController.getServerInfo());
 app.get('/health', systemController.getHealth());
 
 // Routes
+app.use('/search', searchRoutes);
 app.use('/admin', adminRoutes);
 app.use('/channels', channelsRoutes);
 app.use('/subscriptions', subscriptionsRoutes);
