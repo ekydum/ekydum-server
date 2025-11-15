@@ -3,7 +3,6 @@ var YtdlpService = require('../services/ytdlp-service');
 var { Setting } = require('../models');
 
 var ChannelsController = {
-  // Search channels
   searchChannels: async function(req, res, next) {
     try {
       var schema = Joi.object({
@@ -24,7 +23,6 @@ var ChannelsController = {
     }
   },
 
-  // Get channel info
   getChannelInfo: async function(req, res, next) {
     try {
       var ytChannelId = req.params.yt_channel_id;
@@ -36,12 +34,10 @@ var ChannelsController = {
     }
   },
 
-  // Get channel videos
   getChannelVideos: async function(req, res, next) {
     try {
       var ytChannelId = req.params.yt_channel_id;
 
-      // Get page size from user settings or use default
       var pageSizeSetting = await Setting.findOne({
         where: {
           account_id: req.account.id,
@@ -75,6 +71,17 @@ var ChannelsController = {
       );
 
       res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  getChannelPlaylists: async function(req, res, next) {
+    try {
+      var ytChannelId = req.params.yt_channel_id;
+      var playlists = await YtdlpService.getChannelPlaylists(ytChannelId, req.account.id);
+
+      res.json({ playlists: playlists });
     } catch (err) {
       next(err);
     }

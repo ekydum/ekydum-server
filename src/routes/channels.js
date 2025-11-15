@@ -9,5 +9,6 @@ router.use(requireAccountToken);
 router.post('/search', ChannelsController.searchChannels);
 router.get('/:yt_channel_id', ChannelsController.getChannelInfo);
 router.get('/:yt_channel_id/videos', ChannelsController.getChannelVideos);
+router.get('/:yt_channel_id/playlists', ChannelsController.getChannelPlaylists);
 
 module.exports = router;
