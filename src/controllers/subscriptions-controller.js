@@ -1,9 +1,8 @@
 var Joi = require('joi');
-var { Subscription } = require('../models');
+var { Subscription, SavedChannel } = require('../models');
 var YtdlpService = require('../services/ytdlp-service');
 
 var SubscriptionsController = {
-  // Subscribe to channel
   subscribe: async function(req, res, next) {
     try {
       var schema = Joi.object({
@@ -16,20 +15,25 @@ var SubscriptionsController = {
         return next(error);
       }
 
-      // Get channel info from YouTube
       var channelInfo = await YtdlpService.getChannelInfo(value.yt_channel_id, req.account.id);
 
-      // Create subscription
+      var [savedChannel] = await SavedChannel.findOrCreate({
+        where: { yt_channel_id: value.yt_channel_id },
+        defaults: {
+          yt_channel_id: value.yt_channel_id,
+          name: channelInfo.name
+        }
+      });
+
       var subscription = await Subscription.create({
         account_id: req.account.id,
-        yt_channel_id: value.yt_channel_id,
-        yt_channel_name: channelInfo.name
+        channel_id: savedChannel.id
       });
 
       res.status(201).json({
         id: subscription.id,
-        yt_channel_id: subscription.yt_channel_id,
-        yt_channel_name: subscription.yt_channel_name,
+        yt_channel_id: savedChannel.yt_channel_id,
+        yt_channel_name: savedChannel.name,
         created_at: subscription.created_at
       });
     } catch (err) {
@@ -37,22 +41,33 @@ var SubscriptionsController = {
     }
   },
 
-  // Get all subscriptions
   getSubscriptions: async function(req, res, next) {
     try {
       var subscriptions = await Subscription.findAll({
         where: { account_id: req.account.id },
-        attributes: ['id', 'yt_channel_id', 'yt_channel_name', 'created_at'],
+        include: [{
+          model: SavedChannel,
+          as: 'channel',
+          attributes: ['yt_channel_id', 'name']
+        }],
         order: [['created_at', 'DESC']]
       });
 
-      res.json({ subscriptions: subscriptions });
+      var result = subscriptions.map(function(sub) {
+        return {
+          id: sub.id,
+          yt_channel_id: sub.channel.yt_channel_id,
+          yt_channel_name: sub.channel.name,
+          created_at: sub.created_at
+        };
+      });
+
+      res.json({ subscriptions: result });
     } catch (err) {
       next(err);
     }
   },
 
-  // Unsubscribe
   unsubscribe: async function(req, res, next) {
     try {
       var subscription = await Subscription.findOne({

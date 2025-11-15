@@ -2,7 +2,7 @@ var { DataTypes } = require('sequelize');
 var sequelize = require('../config/database');
 var { v4: uuidv4 } = require('uuid');
 
-var Subscription = sequelize.define('Subscription', {
+var StarredVideo = sequelize.define('StarredVideo', {
   id: {
     type: DataTypes.UUID,
     defaultValue: uuidv4,
@@ -17,25 +17,28 @@ var Subscription = sequelize.define('Subscription', {
     },
     onDelete: 'CASCADE'
   },
-  channel_id: {
+  video_id: {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: 'saved_channels',
+      model: 'saved_videos',
       key: 'id'
     },
     onDelete: 'CASCADE'
   }
 }, {
-  tableName: 'subscriptions',
+  tableName: 'starred_videos',
   timestamps: true,
   underscored: true,
   indexes: [
     {
       unique: true,
-      fields: ['account_id', 'channel_id']
+      fields: ['account_id', 'video_id']
+    },
+    {
+      fields: ['account_id', 'created_at']
     }
   ]
 });
 
-module.exports = Subscription;
+module.exports = StarredVideo;
