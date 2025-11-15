@@ -1,11 +1,13 @@
 var CacheService = require('./cache-service');
+var Setting = require('../models/setting');
 const { spawn } = require("child_process");
 
 var YtdlpService = {
   YT_BASE_URL: 'https://www.youtube.com',
 
-  searchChannels: async function(query) {
-    var cacheKey = CacheService.keys.channelSearch(query);
+  searchChannels: async function(query, accountId) {
+    var lang = await this._getLanguageSetting(accountId);
+    var cacheKey = CacheService.keys.channelSearch(query) + ':' + lang;
     var cached = await CacheService.get(cacheKey);
 
     if (cached) {
@@ -17,6 +19,7 @@ var YtdlpService = {
         '--dump-json',
         '--flat-playlist',
         '--playlist-end', '10',
+        '--extractor-args', 'youtube:lang=' + lang,
         'ytsearch10:' + query
       ])
     );
@@ -35,7 +38,6 @@ var YtdlpService = {
         };
       });
 
-    // Remove duplicates
     var uniqueChannels = [];
     var seenIds = {};
     channels.forEach(function(channel) {
@@ -49,7 +51,8 @@ var YtdlpService = {
     return uniqueChannels;
   },
 
-  searchVideos: async function(query, offset, limit) {
+  searchVideos: async function(query, offset, limit, accountId) {
+    var lang = await this._getLanguageSetting(accountId);
     offset = offset || 0;
     limit = limit || 20;
 
@@ -62,6 +65,7 @@ var YtdlpService = {
         '--flat-playlist',
         '--playlist-start', playlistStart.toString(),
         '--playlist-end', playlistEnd.toString(),
+        '--extractor-args', 'youtube:lang=' + lang,
         'ytsearch' + playlistEnd + ':' + query
       ])
     );
@@ -87,8 +91,9 @@ var YtdlpService = {
     return videos;
   },
 
-  getChannelInfo: async function(ytChannelId) {
-    var cacheKey = CacheService.keys.channelInfo(ytChannelId);
+  getChannelInfo: async function(ytChannelId, accountId) {
+    var lang = await this._getLanguageSetting(accountId);
+    var cacheKey = CacheService.keys.channelInfo(ytChannelId) + ':' + lang;
     var cached = await CacheService.get(cacheKey);
 
     if (cached) {
@@ -99,6 +104,7 @@ var YtdlpService = {
       await this._executeYtDlp([
         '--dump-json',
         '--playlist-end', '1',
+        '--extractor-args', 'youtube:lang=' + lang,
         this.YT_BASE_URL + '/channel/' + ytChannelId
       ])
     );
@@ -123,8 +129,9 @@ var YtdlpService = {
     return channelInfo;
   },
 
-  getChannelVideos: async function(ytChannelId, page, pageSize) {
-    var cacheKey = CacheService.keys.channelVideos(ytChannelId, page, pageSize);
+  getChannelVideos: async function(ytChannelId, page, pageSize, accountId) {
+    var lang = await this._getLanguageSetting(accountId);
+    var cacheKey = CacheService.keys.channelVideos(ytChannelId, page, pageSize) + ':' + lang;
     var cached = await CacheService.get(cacheKey);
 
     if (cached) {
@@ -137,6 +144,7 @@ var YtdlpService = {
         '--flat-playlist',
         '--playlist-start', ((page - 1) * pageSize + 1).toString(),
         '--playlist-end', (page * pageSize).toString(),
+        '--extractor-args', 'youtube:lang=' + lang,
         this.YT_BASE_URL + '/channel/' + ytChannelId + '/videos'
       ])
     );
@@ -172,8 +180,9 @@ var YtdlpService = {
     return result;
   },
 
-  getVideoInfo: async function(ytVideoId) {
-    var cacheKey = CacheService.keys.videoInfo(ytVideoId);
+  getVideoInfo: async function(ytVideoId, accountId) {
+    var lang = await this._getLanguageSetting(accountId);
+    var cacheKey = CacheService.keys.videoInfo(ytVideoId) + ':' + lang;
     var cached = await CacheService.get(cacheKey);
 
     if (cached) {
@@ -186,6 +195,7 @@ var YtdlpService = {
         '--no-playlist',
         '--prefer-free-formats',
         '--no-check-certificate',
+        '--extractor-args', 'youtube:lang=' + lang,
         this.YT_BASE_URL + '/watch?v=' + ytVideoId,
       ])
     )?.[0];
@@ -249,6 +259,26 @@ var YtdlpService = {
         });
     } catch (error) {
       throw new Error('Failed to parse yt-dlp output: ' + error.message);
+    }
+  },
+
+  _getLanguageSetting: async function(accountId) {
+    if (!accountId) {
+      return 'en';
+    }
+
+    try {
+      var setting = await Setting.findOne({
+        where: {
+          account_id: accountId,
+          key: 'LANG'
+        }
+      });
+
+      return setting ? setting.value : 'en';
+    } catch (error) {
+      console.error('Failed to get LANG setting:', error.message);
+      return 'en';
     }
   },
 };

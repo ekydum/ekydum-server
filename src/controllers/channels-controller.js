@@ -16,7 +16,7 @@ var ChannelsController = {
         return next(error);
       }
 
-      var channels = await YtdlpService.searchChannels(value.q);
+      var channels = await YtdlpService.searchChannels(value.q, req.account.id);
 
       res.json({ channels: channels });
     } catch (err) {
@@ -28,7 +28,7 @@ var ChannelsController = {
   getChannelInfo: async function(req, res, next) {
     try {
       var ytChannelId = req.params.yt_channel_id;
-      var channelInfo = await YtdlpService.getChannelInfo(ytChannelId);
+      var channelInfo = await YtdlpService.getChannelInfo(ytChannelId, req.account.id);
 
       res.json(channelInfo);
     } catch (err) {
@@ -70,7 +70,8 @@ var ChannelsController = {
       var result = await YtdlpService.getChannelVideos(
         ytChannelId,
         value.page,
-        value.page_size
+        value.page_size,
+        req.account.id
       );
 
       res.json(result);
