@@ -17,7 +17,7 @@ var SearchController = {
           return next(error);
         }
 
-        var videos = await YtdlpService.searchVideos(value.q, value.offset, value.limit);
+        var videos = await YtdlpService.searchVideos(value.q, value.offset, value.limit, req.account.id);
 
         res.json({ videos: videos });
       } catch (err) {
