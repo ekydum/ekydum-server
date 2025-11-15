@@ -49,6 +49,44 @@ var YtdlpService = {
     return uniqueChannels;
   },
 
+  searchVideos: async function(query, offset, limit) {
+    offset = offset || 0;
+    limit = limit || 20;
+
+    var playlistStart = offset + 1;
+    var playlistEnd = offset + limit;
+
+    var results = this._parseJsonOutput(
+      await this._executeYtDlp([
+        '--dump-json',
+        '--flat-playlist',
+        '--playlist-start', playlistStart.toString(),
+        '--playlist-end', playlistEnd.toString(),
+        'ytsearch' + playlistEnd + ':' + query
+      ])
+    );
+
+    var videos = results.map(function(item) {
+      return {
+        yt_id: item.id,
+        title: item.title,
+        description: item.description || '',
+        thumbnail: item.thumbnails && item.thumbnails.length > 0
+          ? item.thumbnails[item.thumbnails.length - 1].url
+          : null,
+        duration: item.duration || 0,
+        view_count: item.view_count || 0,
+        upload_date: item.upload_date ?
+          item.upload_date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') :
+          null,
+        channel_id: item.channel_id || null,
+        channel_name: item.channel || item.uploader || 'Unknown'
+      };
+    });
+
+    return videos;
+  },
+
   getChannelInfo: async function(ytChannelId) {
     var cacheKey = CacheService.keys.channelInfo(ytChannelId);
     var cached = await CacheService.get(cacheKey);
