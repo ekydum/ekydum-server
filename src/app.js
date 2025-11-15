@@ -11,6 +11,7 @@ var videosRoutes = require('./routes/videos');
 var meRoutes = require('./routes/me');
 var hlsRoutes = require('./routes/hls');
 var searchRoutes = require('./routes/search');
+var playlistsRoutes = require('./routes/playlists');
 
 var app = express();
 
@@ -42,6 +43,7 @@ app.get('/health', systemController.getHealth());
 app.use('/search', searchRoutes);
 app.use('/admin', adminRoutes);
 app.use('/channels', channelsRoutes);
+app.use('/playlists', playlistsRoutes);
 app.use('/subscriptions', subscriptionsRoutes);
 app.use('/settings', settingsRoutes);
 app.use('/videos', videosRoutes);

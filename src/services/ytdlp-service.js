@@ -180,6 +180,91 @@ var YtdlpService = {
     return result;
   },
 
+  getChannelPlaylists: async function(ytChannelId, accountId) {
+    var lang = await this._getLanguageSetting(accountId);
+    var cacheKey = 'playlists:' + ytChannelId + ':' + lang;
+    var cached = await CacheService.get(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
+    var results = this._parseJsonOutput(
+      await this._executeYtDlp([
+        '--dump-json',
+        '--flat-playlist',
+        '--extractor-args', 'youtube:lang=' + lang,
+        this.YT_BASE_URL + '/channel/' + ytChannelId + '/playlists'
+      ])
+    );
+
+    var playlists = results.map(function(item) {
+      return {
+        yt_id: item.id,
+        title: item.title,
+        description: item.description || '',
+        thumbnail: item.thumbnails && item.thumbnails.length > 0
+          ? item.thumbnails[item.thumbnails.length - 1].url
+          : null,
+        video_count: item.playlist_count || 0
+      };
+    });
+
+    await CacheService.set(cacheKey, playlists, CacheService.TTL.CHANNEL_INFO);
+    return playlists;
+  },
+
+  getPlaylistVideos: async function(ytPlaylistId, page, pageSize, accountId) {
+    var lang = await this._getLanguageSetting(accountId);
+    var cacheKey = 'playlist:' + ytPlaylistId + ':' + page + ':' + pageSize + ':' + lang;
+    var cached = await CacheService.get(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
+    var results = this._parseJsonOutput(
+      await this._executeYtDlp([
+        '--dump-json',
+        '--flat-playlist',
+        '--playlist-start', ((page - 1) * pageSize + 1).toString(),
+        '--playlist-end', (page * pageSize).toString(),
+        '--extractor-args', 'youtube:lang=' + lang,
+        this.YT_BASE_URL + '/playlist?list=' + ytPlaylistId
+      ])
+    );
+
+    var videos = results.map(function(item) {
+      return {
+        yt_id: item.id,
+        title: item.title,
+        description: item.description || '',
+        thumbnail: item.thumbnails && item.thumbnails.length > 0
+          ? item.thumbnails[item.thumbnails.length - 1].url
+          : null,
+        duration: item.duration || 0,
+        view_count: item.view_count || 0,
+        upload_date: item.upload_date ?
+          item.upload_date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') :
+          null,
+        channel_id: item.channel_id || null,
+        channel_name: item.channel || item.uploader || 'Unknown'
+      };
+    });
+
+    var result = {
+      items: videos,
+      pagination: {
+        page: page,
+        page_size: pageSize,
+        has_next: videos.length === pageSize
+      }
+    };
+
+    await CacheService.set(cacheKey, result, CacheService.TTL.CHANNEL_VIDEOS);
+    return result;
+  },
+
   getVideoInfo: async function(ytVideoId, accountId) {
     var lang = await this._getLanguageSetting(accountId);
     var cacheKey = CacheService.keys.videoInfo(ytVideoId) + ':' + lang;
