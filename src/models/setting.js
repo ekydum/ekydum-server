@@ -29,6 +29,8 @@ var Setting = sequelize.define('Setting', {
   tableName: 'settings',
   timestamps: true,
   underscored: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   indexes: [
     {
       unique: true,
