@@ -13,6 +13,7 @@ var hlsRoutes = require('./routes/hls');
 var searchRoutes = require('./routes/search');
 var playlistsRoutes = require('./routes/playlists');
 var starredRoutes = require('./routes/starred');
+var watchLaterRoutes = require('./routes/watch-later');
 
 var app = express();
 
@@ -51,6 +52,7 @@ app.use('/videos', videosRoutes);
 app.use('/me', meRoutes);
 app.use('/hls', hlsRoutes);
 app.use('/starred', starredRoutes);
+app.use('/watch-later', watchLaterRoutes);
 
 // 404 handler
 app.use(systemController.err404());

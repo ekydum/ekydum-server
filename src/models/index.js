@@ -5,6 +5,7 @@ var Setting = require('./setting');
 var SavedChannel = require('./saved-channel');
 var SavedVideo = require('./saved-video');
 var StarredVideo = require('./starred-video');
+var WatchLaterVideo = require('./watch-later-video');
 var { Umzug, SequelizeStorage } = require('umzug');
 var path = require('path');
 
@@ -21,6 +22,8 @@ Subscription.belongsTo(SavedChannel, { foreignKey: 'channel_id', as: 'channel' }
 SavedChannel.hasMany(Subscription, { foreignKey: 'channel_id', as: 'subscriptions' });
 StarredVideo.belongsTo(SavedVideo, { foreignKey: 'video_id', as: 'video' });
 SavedVideo.hasMany(StarredVideo, { foreignKey: 'video_id', as: 'starred' });
+WatchLaterVideo.belongsTo(SavedVideo, { foreignKey: 'video_id', as: 'video' });
+SavedVideo.hasMany(WatchLaterVideo, { foreignKey: 'video_id', as: 'watch_later' });
 
 // Auto-sync function (runs migrations)
 async function syncDatabase() {
@@ -54,5 +57,6 @@ module.exports = {
   SavedChannel,
   SavedVideo,
   StarredVideo,
+  WatchLaterVideo,
   syncDatabase
 };
