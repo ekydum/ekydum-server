@@ -37,6 +37,8 @@ var SavedVideo = sequelize.define('SavedVideo', {
   tableName: 'saved_videos',
   timestamps: true,
   underscored: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   indexes: [
     {
       unique: true,
