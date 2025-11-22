@@ -72,7 +72,7 @@ var YtdlpService = {
 
     var videos = results.map(function(item) {
       return {
-        yt_id: item.id,
+        yt_video_id: item.id,
         title: item.title,
         description: item.description || '',
         thumbnail: item.thumbnails && item.thumbnails.length > 0
