@@ -4,7 +4,7 @@ var RelayController = require('../controllers/relay-controller');
 var { requireAccountToken } = require('../middleware/auth');
 var ProxyHelper = require('../helpers/proxy.helper');
 
-router.use(requireAccountToken);
+router.use(requireAccountToken());
 
 router.get('/', RelayController.root());
 

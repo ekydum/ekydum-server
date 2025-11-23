@@ -3,7 +3,7 @@ var router = express.Router();
 var WatchLaterController = require('../controllers/watch-later-controller');
 var { requireAccountToken } = require('../middleware/auth');
 
-router.use(requireAccountToken);
+router.use(requireAccountToken());
 
 router.get('/', WatchLaterController.getWatchLater());
 router.post('/', WatchLaterController.addWatchLater());

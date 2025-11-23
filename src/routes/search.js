@@ -3,7 +3,7 @@ var router = express.Router();
 var SearchController = require('../controllers/search-controller');
 var { requireAccountToken } = require('../middleware/auth');
 
-router.use(requireAccountToken);
+router.use(requireAccountToken());
 
 router.post('/videos', SearchController.searchVideos());
 

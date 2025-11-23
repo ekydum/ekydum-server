@@ -3,7 +3,7 @@ var router = express.Router();
 var SubscriptionsController = require('../controllers/subscriptions-controller');
 var { requireAccountToken } = require('../middleware/auth');
 
-router.use(requireAccountToken);
+router.use(requireAccountToken());
 
 router.post('/', SubscriptionsController.subscribe());
 router.get('/', SubscriptionsController.getSubscriptions());

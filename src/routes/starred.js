@@ -3,7 +3,7 @@ var router = express.Router();
 var StarredController = require('../controllers/starred-controller');
 var { requireAccountToken } = require('../middleware/auth');
 
-router.use(requireAccountToken);
+router.use(requireAccountToken());
 
 router.get('/starred', StarredController.getStarred());
 router.post('/starred', StarredController.addStarred());
