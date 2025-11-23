@@ -1,28 +1,32 @@
 var { Account } = require('../models');
 var Joi = require('joi');
+var CacheService = require('../services/cache-service');
 
 var AdminController = {
   // Create account
   createAccount: async function(req, res, next) {
     try {
       var schema = Joi.object({
-        name: Joi.string().required().min(1).max(255)
+        name: Joi.string().required().min(1).max(255),
+        status: Joi.number().integer().valid(1, 2, 3).optional()
       });
-      
+
       var { error, value } = schema.validate(req.body);
       if (error) {
         error.isJoi = true;
         return next(error);
       }
-      
+
       var account = await Account.create({
-        name: value.name
+        name: value.name,
+        status: value.status || Account.STATUS.ACTIVE
       });
-      
+
       res.status(201).json({
         id: account.id,
         name: account.name,
         token: account.token,
+        status: account.status,
         created_at: account.created_at
       });
     } catch (err) {
@@ -34,10 +38,10 @@ var AdminController = {
   getAllAccounts: async function(req, res, next) {
     try {
       var accounts = await Account.findAll({
-        attributes: ['id', 'name', 'token', 'created_at', 'updated_at'],
+        attributes: ['id', 'name', 'token', 'status', 'created_at', 'updated_at'],
         order: [['created_at', 'DESC']]
       });
-      
+
       res.json({ accounts: accounts });
     } catch (err) {
       next(err);
@@ -48,13 +52,13 @@ var AdminController = {
   getAccountById: async function(req, res, next) {
     try {
       var account = await Account.findByPk(req.params.id, {
-        attributes: ['id', 'name', 'token', 'created_at', 'updated_at']
+        attributes: ['id', 'name', 'token', 'status', 'created_at', 'updated_at']
       });
-      
+
       if (!account) {
         return res.status(404).json({ error: 'Account not found' });
       }
-      
+
       res.json(account);
     } catch (err) {
       next(err);
@@ -65,31 +69,40 @@ var AdminController = {
   updateAccount: async function(req, res, next) {
     try {
       var schema = Joi.object({
-        name: Joi.string().min(1).max(255)
+        name: Joi.string().min(1).max(255).optional(),
+        status: Joi.number().integer().valid(1, 2, 3).optional()
       });
-      
+
       var { error, value } = schema.validate(req.body);
       if (error) {
         error.isJoi = true;
         return next(error);
       }
-      
+
       var account = await Account.findByPk(req.params.id);
-      
+
       if (!account) {
         return res.status(404).json({ error: 'Account not found' });
       }
-      
+
       if (value.name) {
         account.name = value.name;
       }
-      
+
+      if (value.status) {
+        account.status = value.status;
+      }
+
       await account.save();
-      
+
+      // Clear cache when status changes
+      await CacheService.del(CacheService.keys.accountToken(account.token));
+
       res.json({
         id: account.id,
         name: account.name,
         token: account.token,
+        status: account.status,
         updated_at: account.updated_at
       });
     } catch (err) {
@@ -101,14 +114,71 @@ var AdminController = {
   deleteAccount: async function(req, res, next) {
     try {
       var account = await Account.findByPk(req.params.id);
-      
+
       if (!account) {
         return res.status(404).json({ error: 'Account not found' });
       }
-      
+
+      // Clear cache
+      await CacheService.del(CacheService.keys.accountToken(account.token));
+
       await account.destroy();
-      
+
       res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  approveAccount: async function(req, res, next) {
+    try {
+      var account = await Account.findByPk(req.params.id);
+
+      if (!account) {
+        return res.status(404).json({ error: 'Account not found' });
+      }
+
+      account.status = Account.STATUS.ACTIVE;
+      await account.save();
+
+      // Clear cache to force refresh
+      await CacheService.del(CacheService.keys.accountToken(account.token));
+
+      res.json({
+        success: true,
+        account: {
+          id: account.id,
+          name: account.name,
+          status: account.status
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  blockAccount: async function(req, res, next) {
+    try {
+      var account = await Account.findByPk(req.params.id);
+
+      if (!account) {
+        return res.status(404).json({ error: 'Account not found' });
+      }
+
+      account.status = Account.STATUS.BLOCKED;
+      await account.save();
+
+      // Clear cache to force refresh
+      await CacheService.del(CacheService.keys.accountToken(account.token));
+
+      res.json({
+        success: true,
+        account: {
+          id: account.id,
+          name: account.name,
+          status: account.status
+        }
+      });
     } catch (err) {
       next(err);
     }

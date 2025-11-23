@@ -13,4 +13,8 @@ router.get('/accounts/:id', AdminController.getAccountById);
 router.put('/accounts/:id', AdminController.updateAccount);
 router.delete('/accounts/:id', AdminController.deleteAccount);
 
+// Account status management
+router.post('/accounts/:id/approve', AdminController.approveAccount);
+router.post('/accounts/:id/block', AdminController.blockAccount);
+
 module.exports = router;

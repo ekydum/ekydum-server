@@ -17,6 +17,14 @@ var Account = sequelize.define('Account', {
     allowNull: false,
     unique: true,
     defaultValue: uuidv4
+  },
+  status: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 2,
+    validate: {
+      isIn: [[1, 2, 3]]
+    }
   }
 }, {
   tableName: 'accounts',
@@ -28,8 +36,17 @@ var Account = sequelize.define('Account', {
     {
       unique: true,
       fields: ['token']
+    },
+    {
+      fields: ['status']
     }
   ]
 });
+
+Account.STATUS = {
+  INACTIVE: 1,
+  ACTIVE: 2,
+  BLOCKED: 3
+};
 
 module.exports = Account;
