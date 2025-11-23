@@ -10,6 +10,7 @@ var CacheService = {
     VIDEO_INFO: 3600 * 5,      // 5 hours
     ACCOUNT_TOKEN: 600,        // 10 minutes
     LOGIN_REQUEST: 86400,      // 24 hours
+    ACCOUNT_SETTINGS: 600,     // 10 minutes
   },
 
   // Generate hash for search query
@@ -53,16 +54,6 @@ var CacheService = {
     return r;
   },
 
-  // Get keys by pattern
-  keys: async function(pattern) {
-    try {
-      return await redis.keys(pattern);
-    } catch (error) {
-      console.error('Cache keys error:', error);
-      return [];
-    }
-  },
-
   // Cache keys generators
   keys: {
     channelInfo: function(ytChannelId) {
@@ -85,7 +76,10 @@ var CacheService = {
     },
     accountLoginRequests: function(accountId) {
       return 'account:' + accountId + ':login_requests';
-    }
+    },
+    accountSettings: function(accountId) {
+      return 'account:' + accountId + ':settings';
+    },
   },
 
   // Get keys by pattern (method version)

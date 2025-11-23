@@ -5,6 +5,6 @@ var { requireAccountToken } = require('../middleware/auth');
 
 router.use(requireAccountToken);
 
-router.get('/:yt_playlist_id/videos', PlaylistsController.getPlaylistVideos);
+router.get('/:yt_playlist_id/videos', PlaylistsController.getPlaylistVideos());
 
 module.exports = router;
