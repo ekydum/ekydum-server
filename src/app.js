@@ -14,6 +14,7 @@ var searchRoutes = require('./routes/search');
 var playlistsRoutes = require('./routes/playlists');
 var starredRoutes = require('./routes/starred');
 var watchLaterRoutes = require('./routes/watch-later');
+var quickConnectRoutes = require('./routes/quick-connect');
 
 var app = express();
 
@@ -42,6 +43,7 @@ app.get('/', systemController.getServerInfo());
 app.get('/health', systemController.getHealth());
 
 // Routes
+app.use('/quick-connect', quickConnectRoutes);
 app.use('/search', searchRoutes);
 app.use('/admin', adminRoutes);
 app.use('/channels', channelsRoutes);
