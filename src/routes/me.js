@@ -1,8 +1,8 @@
 var express = require('express');
 var router = express.Router();
-var { requireAccountTokenAllowInactive } = require('../middleware/auth');
+var { requireAccountToken } = require('../middleware/auth');
 
-router.get('/', requireAccountTokenAllowInactive, function(req, res) {
+router.get('/', requireAccountToken(true), function(req, res) {
   res.json({
     id: req.account.id,
     name: req.account.name,

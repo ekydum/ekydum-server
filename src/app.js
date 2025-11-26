@@ -9,7 +9,7 @@ var subscriptionsRoutes = require('./routes/subscriptions');
 var settingsRoutes = require('./routes/settings');
 var videosRoutes = require('./routes/videos');
 var meRoutes = require('./routes/me');
-var hlsRoutes = require('./routes/hls');
+var relayRoutes = require('./routes/relay');
 var searchRoutes = require('./routes/search');
 var playlistsRoutes = require('./routes/playlists');
 var starredRoutes = require('./routes/starred');
@@ -52,7 +52,7 @@ app.use('/subscriptions', subscriptionsRoutes);
 app.use('/settings', settingsRoutes);
 app.use('/videos', videosRoutes);
 app.use('/me', meRoutes);
-app.use('/hls', hlsRoutes);
+app.use('/relay', relayRoutes);
 app.use('/starred', starredRoutes);
 app.use('/watch-later', watchLaterRoutes);
 

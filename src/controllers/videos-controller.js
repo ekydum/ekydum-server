@@ -1,15 +1,30 @@
-var YtdlpService = require('../services/ytdlp-service');
+var YtdlpService = require('../services/yt-service');
+var { ClientSettingsHelper } = require('../helpers/client-settings.helper');
+var ProxyHelper = require('../helpers/proxy.helper');
 
 var VideosController = {
-  getVideoInfo: async function(req, res, next) {
-    try {
-      var ytVideoId = req.params.yt_video_id;
-      var videoInfo = await YtdlpService.getVideoInfo(ytVideoId, req.account.id);
+  getVideoInfo: function () {
+    return async function(req, res, next) {
+      try {
+        var ytVideoId = req.params.yt_video_id;
+        var accountId = req.account.id;
+        var token = req.account.token;
 
-      res.json(videoInfo);
-    } catch (err) {
-      next(err);
-    }
+        var [videoInfo, settings] = await Promise.all([
+          YtdlpService.getVideoInfo(ytVideoId, accountId),
+          ClientSettingsHelper.getSettings(accountId)
+        ]);
+
+        var shouldProxyThumbnails = +settings.RELAY_PROXY_THUMBNAILS === 1;
+        if (shouldProxyThumbnails && videoInfo?.thumbnail) {
+          videoInfo.thumbnail = ProxyHelper.wrapUrl(ProxyHelper.ENDPOINT_IMG, req, videoInfo.thumbnail, token);
+        }
+
+        res.json(videoInfo);
+      } catch (err) {
+        next(err);
+      }
+    };
   },
 };
 
