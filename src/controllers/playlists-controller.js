@@ -1,5 +1,5 @@
 var Joi = require('joi');
-var YtdlpService = require('../services/ytdlp-service');
+var YtdlpService = require('../services/yt-service');
 var { ClientSettingsHelper } = require('../helpers/client-settings.helper');
 var ProxyHelper = require('../helpers/proxy.helper');
 

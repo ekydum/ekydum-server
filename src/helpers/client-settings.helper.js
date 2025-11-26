@@ -1,17 +1,22 @@
 var { Setting } = require('../models');
 var CacheService = require('../services/cache-service');
 
+/** @type { SettingsObject } */
 var DEFAULT_SETTINGS = {
   DEFAULT_QUALITY: '720p',
-  PAGE_SIZE: 30,
+  PAGE_SIZE: '30',
   LANG: 'en',
-  RELAY_PROXY_THUMBNAILS: 0,
+  RELAY_PROXY_THUMBNAILS: '0',
 };
 
 var MEMORY_CACHE_TTL = 60 * 1000; // 1 minute in milliseconds
 var memoryCache = {};
 
 var ClientSettingsHelper = {
+  /**
+   * @param { string } accountId
+   * @returns {Promise<SettingsObject>}
+   */
   getSettings: async function(accountId) {
     var now = Date.now();
     var result = null;
@@ -61,6 +66,10 @@ var ClientSettingsHelper = {
     return result;
   },
 
+  /**
+   * @param {string} accountId
+   * @returns {Promise<void>}
+   */
   clearCache: async function(accountId) {
     delete memoryCache[accountId];
     await CacheService.del(

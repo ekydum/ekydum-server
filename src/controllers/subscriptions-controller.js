@@ -1,6 +1,6 @@
 var Joi = require('joi');
 var { Subscription, SavedChannel } = require('../models');
-var YtdlpService = require('../services/ytdlp-service');
+var YtdlpService = require('../services/yt-service');
 
 var SubscriptionsController = {
   _schemaSubscribe: Joi.object({
