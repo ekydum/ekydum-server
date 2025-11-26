@@ -32,7 +32,7 @@ var YtService = {
           )
         )
       )(
-        (CacheService.keys.channelSearch(query) + ':' + lang)
+        CacheService.keys.ytChannelSearch(query, lang)
       )
     );
   },
@@ -100,7 +100,7 @@ var YtService = {
           )
         )
       )(
-        (CacheService.keys.channelInfo(ytChannelId) + ':' + lang)
+        CacheService.keys.ytChannelInfo(ytChannelId, lang)
       )
     );
   },
@@ -120,7 +120,7 @@ var YtService = {
           cacheKey,
           CacheService.TTL.CHANNEL_VIDEOS,
           async () => YtService._paginatedResponse(
-            await self._ytQuery(
+            await YtService._ytQuery(
               [
                 '--dump-json',
                 '--flat-playlist',
@@ -130,14 +130,14 @@ var YtService = {
                 this._YT_BASE_URL + '/channel/' + ytChannelId + '/videos'
               ],
               (item) => !!item,
-              (item) => self._mapVideoListItem(item)
+              (item) => YtService._mapVideoListItem(item)
             ),
             page,
             pageSize
           )
         )
       )(
-        (CacheService.keys.channelVideos(ytChannelId, page, pageSize) + ':' + lang)
+        CacheService.keys.ytChannelVideos(ytChannelId, page, pageSize, lang)
       )
     );
   },
@@ -153,8 +153,8 @@ var YtService = {
       async (lang) => (
         async (cacheKey) => YtService._cacheProxy(
           cacheKey,
-          CacheService.TTL.CHANNEL_INFO,
-          async () => self._ytQuery(
+          CacheService.TTL.CHANNEL_PLAYLISTS,
+          async () => YtService._ytQuery(
             [
               '--dump-json',
               '--flat-playlist',
@@ -162,11 +162,11 @@ var YtService = {
               this._YT_BASE_URL + '/channel/' + ytChannelId + '/playlists'
             ],
             (item) => !!item,
-            (item) => self._mapPlaylist(item)
+            (item) => YtService._mapPlaylist(item)
           )
         )
       )(
-        ('playlists:' + ytChannelId + ':' + lang) // TODO: use key generator from CacheService
+        CacheService.keys.ytChannelPlaylists(ytChannelId, lang)
       )
     );
   },
@@ -184,7 +184,7 @@ var YtService = {
       async (lang) => (
         async (cacheKey) => YtService._cacheProxy(
           cacheKey,
-          CacheService.TTL.CHANNEL_VIDEOS,
+          CacheService.TTL.CHANNEL_PLAYLIST_VIDEOS,
           async () => YtService._paginatedResponse(
             await YtService._ytQuery(
               [
@@ -203,7 +203,7 @@ var YtService = {
           )
         )
       )(
-        ('playlist:' + ytPlaylistId + ':' + page + ':' + pageSize + ':' + lang) // TODO: key generator
+        CacheService.keys.ytChannelPlaylistVideos(ytPlaylistId, page, pageSize, lang)
       )
     );
   },
@@ -237,7 +237,7 @@ var YtService = {
           )
         )
       )(
-        (CacheService.keys.videoInfo(ytVideoId) + ':' + lang)
+        CacheService.keys.ytVideoInfo(ytVideoId, lang)
       )
     );
   },

@@ -81,7 +81,7 @@ var AdminController = {
               account.status = value.status;
             }
             await account.save();
-            await CacheService.del(CacheService.keys.accountToken(account.token));
+            await CacheService.del(CacheService.keys.authAccountToken(account.token));
             res.json(account);
           } else {
             res.status(404).json({ error: 'Account not found' });
@@ -98,7 +98,7 @@ var AdminController = {
       try {
         var account = await Account.findByPk(req.params.id);
         if (account) {
-          await CacheService.del(CacheService.keys.accountToken(account.token));
+          await CacheService.del(CacheService.keys.authAccountToken(account.token));
           await account.destroy();
           res.status(204).send();
         } else {
@@ -117,7 +117,7 @@ var AdminController = {
         if (account) {
           account.status = Account.STATUS.ACTIVE;
           await account.save();
-          await CacheService.del(CacheService.keys.accountToken(account.token));
+          await CacheService.del(CacheService.keys.authAccountToken(account.token));
           res.json({
             success: true,
             account: {
@@ -142,7 +142,7 @@ var AdminController = {
         if (account) {
           account.status = Account.STATUS.BLOCKED;
           await account.save();
-          await CacheService.del(CacheService.keys.accountToken(account.token));
+          await CacheService.del(CacheService.keys.authAccountToken(account.token));
           res.json({
             success: true,
             account: {
@@ -191,7 +191,7 @@ var AdminController = {
     return async function(req, res, next) {
       try {
         var requestId = req.params.request_id;
-        var loginRequest = await CacheService.get(CacheService.keys.loginRequest(requestId));
+        var loginRequest = await CacheService.get(CacheService.keys.qcLoginRequest(requestId));
 
         if (!loginRequest) {
           res.status(404).json({ error: 'Login request not found or expired' });
@@ -209,7 +209,7 @@ var AdminController = {
             loginRequest.token = account.token;
 
             await CacheService.set(
-              CacheService.keys.loginRequest(requestId),
+              CacheService.keys.qcLoginRequest(requestId),
               loginRequest,
               CacheService.TTL.LOGIN_REQUEST
             );
@@ -227,7 +227,7 @@ var AdminController = {
     return async function(req, res, next) {
       try {
         var requestId = req.params.request_id;
-        var loginRequest = await CacheService.get(CacheService.keys.loginRequest(requestId));
+        var loginRequest = await CacheService.get(CacheService.keys.qcLoginRequest(requestId));
 
         if (!loginRequest) {
           res.status(404).json({ error: 'Login request not found or expired' });
@@ -237,7 +237,7 @@ var AdminController = {
           loginRequest.status = 'denied';
 
           await CacheService.set(
-            CacheService.keys.loginRequest(requestId),
+            CacheService.keys.qcLoginRequest(requestId),
             loginRequest,
             CacheService.TTL.LOGIN_REQUEST
           );

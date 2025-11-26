@@ -24,7 +24,7 @@ function requireAccountToken(allowInactive = false) {
       if (!token) {
         res.status(401).json({ error: 'Account token required' });
       } else {
-        var cacheKey = CacheService.keys.accountToken(token),
+        var cacheKey = CacheService.keys.authAccountToken(token),
             account = await CacheService.get(cacheKey);
         if (!account) {
           account = await Account.findOne({ where: { token } });

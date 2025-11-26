@@ -4,13 +4,15 @@ var crypto = require('crypto');
 var CacheService = {
   // TTL in seconds
   TTL: {
-    CHANNEL_INFO: 3600,        // 1 hour
-    CHANNEL_VIDEOS: 1800,      // 30 minutes
-    CHANNEL_SEARCH: 3600,      // 1 hour
-    VIDEO_INFO: 3600 * 5,      // 5 hours
-    ACCOUNT_TOKEN: 600,        // 10 minutes
-    LOGIN_REQUEST: 86400,      // 24 hours
-    ACCOUNT_SETTINGS: 600,     // 10 minutes
+    CHANNEL_INFO: 3600,             // 1 hour
+    CHANNEL_PLAYLISTS: 3600,        // 1 hour
+    CHANNEL_VIDEOS: 1800,           // 30 minutes
+    CHANNEL_PLAYLIST_VIDEOS: 1800,  // 30 minutes
+    CHANNEL_SEARCH: 3600,           // 1 hour
+    VIDEO_INFO: 3600 * 5,           // 5 hours
+    ACCOUNT_TOKEN: 600,             // 10 minutes
+    LOGIN_REQUEST: 86400,           // 24 hours
+    ACCOUNT_SETTINGS: 600,          // 10 minutes
   },
 
   // Generate hash for search query
@@ -47,7 +49,7 @@ var CacheService = {
     var r = false;
     try {
       await redis.del(key);
-      return true;
+      r = true;
     } catch (error) {
       console.error('Cache delete error:', error);
     }
@@ -56,40 +58,51 @@ var CacheService = {
 
   // Cache keys generators
   keys: {
-    channelInfo: function(ytChannelId) {
-      return 'channel:info:' + ytChannelId;
+    ytChannelInfo: function(ytChannelId, lang) {
+      return 'yt:channel:info:' + ytChannelId + ':' + lang;
     },
-    channelVideos: function(ytChannelId, page, pageSize) {
-      return 'channel:videos:' + ytChannelId + ':' + page + ':' + pageSize;
+    ytChannelVideos: function(ytChannelId, page, pageSize, lang) {
+      return 'yt:channel:videos:' + ytChannelId + ':' + page + ':' + pageSize + ':' + lang;
     },
-    channelSearch: function(query) {
-      return 'channel:search:' + CacheService.hashQuery(query);
+    ytChannelSearch: function(query, lang) {
+      return 'yt:channel:search:' + CacheService.hashQuery(query) + ':' + lang;
     },
-    videoInfo: function(videoId) {
-      return 'video:info:' + videoId;
+    ytChannelPlaylists: function(ytChannelId, lang) {
+      return 'yt:playlists:' + ytChannelId + ':' + lang;
     },
-    accountToken: function(token) {
-      return 'account:token:' + token;
+    ytChannelPlaylistVideos: function(ytPlaylistId, page, pageSize, lang) {
+      return 'yt:playlist:' + ytPlaylistId + ':' + page + ':' + pageSize + ':' + lang;
     },
-    loginRequest: function(requestId) {
-      return 'login_request:' + requestId;
+    ytVideoInfo: function(videoId, lang) {
+      return 'yt:video:info:' + videoId + ':' + lang;
     },
-    accountLoginRequests: function(accountId) {
-      return 'account:' + accountId + ':login_requests';
-    },
+    // account settings
     accountSettings: function(accountId) {
       return 'account:' + accountId + ':settings';
     },
+    // auth
+    authAccountToken: function(token) {
+      return 'auth:account:token:' + token;
+    },
+    // quick connect
+    qcLoginRequest: function(requestId) {
+      return 'qc:login_request:' + requestId;
+    },
+    qcAccountLoginRequests: function(accountId) {
+      return 'qc:account:' + accountId + ':login_requests';
+    },
   },
 
-  // Get keys by pattern (method version)
+  // Get keys by pattern
   getKeys: async function(pattern) {
+    var r;
     try {
-      return await redis.keys(pattern);
+      r = await redis.keys(pattern);
     } catch (error) {
       console.error('Cache keys error:', error);
-      return [];
+      r = [];
     }
+    return r;
   }
 };
 

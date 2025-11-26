@@ -73,12 +73,12 @@ var QuickConnectController = {
           } else if (account.status !== Account.STATUS.ACTIVE) {
             res.status(400).json({ error: 'Account is not active' });
           } else {
-            var accountRequestsKey = CacheService.keys.accountLoginRequests(account.id);
+            var accountRequestsKey = CacheService.keys.qcAccountLoginRequests(account.id);
             var requestIds = await CacheService.get(accountRequestsKey) || [];
 
             var validRequestIds = [];
             for (var id of requestIds) {
-              var cachedReq = await CacheService.get(CacheService.keys.loginRequest(id));
+              var cachedReq = await CacheService.get(CacheService.keys.qcLoginRequest(id));
               if (cachedReq) {
                 validRequestIds.push(id);
               }
@@ -99,7 +99,7 @@ var QuickConnectController = {
               };
 
               await CacheService.set(
-                CacheService.keys.loginRequest(requestId),
+                CacheService.keys.qcLoginRequest(requestId),
                 loginRequest,
                 CacheService.TTL.LOGIN_REQUEST
               );
@@ -128,7 +128,7 @@ var QuickConnectController = {
     return async function(req, res, next) {
       try {
         var requestId = req.params.request_id;
-        var loginRequest = await CacheService.get(CacheService.keys.loginRequest(requestId));
+        var loginRequest = await CacheService.get(CacheService.keys.qcLoginRequest(requestId));
         if (loginRequest) {
           res.json({
             status: loginRequest.status,
