@@ -17,9 +17,10 @@ var ProxyHelper = {
 
   wrapObjectThumbnail: function (referenceReq, objRef, token, thumbnailKey = 'thumbnail') {
     if (objRef && objRef[thumbnailKey]) {
-      var thumbnailSrc = objRef[thumbnailKey];
+      var thumbnailSrc = objRef[thumbnailKey],
+          srcKey = thumbnailKey + '_src';
       Object.assign(objRef, {
-        [thumbnailKey + '_src']: thumbnailSrc,
+        [srcKey]: objRef[srcKey] || thumbnailSrc,
         [thumbnailKey]: ProxyHelper.wrapUrl(ProxyHelper.ENDPOINT_IMG,referenceReq, thumbnailSrc, token),
       });
     }

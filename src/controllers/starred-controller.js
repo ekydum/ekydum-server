@@ -39,10 +39,12 @@ var StarredController = {
         var shouldProxyThumbnails = +settings.RELAY_PROXY_THUMBNAILS === 1;
 
         var result = starred.map(function(s) {
+          /** @type { YtVideoListItem } */
           var obj = {
-            yt_video_id: s.video.yt_video_id,
+            yt_id: s.video.yt_video_id,
             title: s.video.title,
             thumbnail: s.video.thumbnail,
+            thumbnail_src: s.video.thumbnail,
             duration: s.video.duration,
             channel_id: s.video.channel ? s.video.channel.yt_channel_id : null,
             channel_name: s.video.channel ? s.video.channel.name : null,

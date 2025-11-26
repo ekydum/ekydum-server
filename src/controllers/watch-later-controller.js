@@ -38,10 +38,12 @@ var WatchLaterController = {
         var shouldProxyThumbnails = +settings.RELAY_PROXY_THUMBNAILS === 1;
 
         var result = watchLater.map(function(w) {
+          /** @type { YtVideoListItem } */
           var obj = {
-            yt_video_id: w.video.yt_video_id,
+            yt_id: w.video.yt_video_id,
             title: w.video.title,
             thumbnail: w.video.thumbnail,
+            thumbnail_src: w.video.thumbnail,
             duration: w.video.duration,
             channel_id: w.video.channel ? w.video.channel.yt_channel_id : null,
             channel_name: w.video.channel ? w.video.channel.name : null,
