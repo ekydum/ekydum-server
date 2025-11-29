@@ -6,8 +6,7 @@ var {
 } = require('../helpers/client-settings.helper');
 
 var SETTING_SCHEMAS = {
-  DEFAULT_QUALITY: Joi.string().valid('min', '360p', '480p', '720p', '1080p', '2k', '4k', 'max').required(),
-  PAGE_SIZE: Joi.number().integer().valid(10, 20, 30, 50, 100, 200, 300, 500).required(),
+  DEFAULT_QUALITY: Joi.string().pattern(/^(min|max|2k|4k|[1-9]\d{1,3}p)$/).required(),
   LANG: Joi.string().regex(/^[a-z]{2}$/).required(),
   RELAY_PROXY_THUMBNAILS: Joi.number().valid(0, 1).required(),
 };

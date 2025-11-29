@@ -4,7 +4,6 @@ var CacheService = require('../services/cache-service');
 /** @type { SettingsObject } */
 var DEFAULT_SETTINGS = {
   DEFAULT_QUALITY: '720p',
-  PAGE_SIZE: '30',
   LANG: 'en',
   RELAY_PROXY_THUMBNAILS: '0',
 };
