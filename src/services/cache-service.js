@@ -6,7 +6,7 @@ var CacheService = {
   TTL: {
     CHANNEL_INFO: 3600,             // 1 hour
     CHANNEL_PLAYLISTS: 3600,        // 1 hour
-    CHANNEL_VIDEOS: 1800,           // 30 minutes
+    CHANNEL_VIDEOS: 60 * 5,         // 5 minutes
     CHANNEL_PLAYLIST_VIDEOS: 1800,  // 30 minutes
     CHANNEL_SEARCH: 3600,           // 1 hour
     VIDEO_INFO: 3600 * 5,           // 5 hours

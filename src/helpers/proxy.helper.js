@@ -27,6 +27,36 @@ var ProxyHelper = {
     return objRef;
   },
 
+  /**
+   * @param { Request } referenceReq
+   * @param { YtVideo } videoRef
+   * @param { string } token
+   * @returns { YtVideo }
+   */
+  wrapVideoFormats: function (referenceReq, videoRef, token) {
+    if (videoRef) {
+      var hlsUrlKeys = ['url', 'manifest_url'];
+      ['formats', 'requested_formats'].forEach((arrKey) => {
+        if (Array.isArray(videoRef[arrKey])) {
+          videoRef[arrKey].forEach(/** @param { YtVideo_Format } formatRef */ (formatRef) => {
+            if (formatRef.url) {
+              // HLS manifest
+              if (formatRef.protocol && (formatRef.protocol + '').includes('m3u8')) {
+                hlsUrlKeys.forEach((k) => {
+                  if (formatRef[k]) {
+                    formatRef[k] = ProxyHelper.wrapUrl(ProxyHelper.ENDPOINT_HLS_MANIFEST, referenceReq, formatRef[k], token);
+                  }
+                });
+              }
+              // ... other formats wrapping, currently not needed
+            }
+          });
+        }
+      });
+    }
+    return videoRef;
+  },
+
   _getBaseUrl: function (req) {
     if (!ProxyHelper._proxyBaseUrlCached) {
       ProxyHelper._createBaseUrlAndCache(req);
