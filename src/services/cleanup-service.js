@@ -1,6 +1,6 @@
 var cron = require('node-cron');
 var { Op } = require('sequelize');
-var { SavedVideo, StarredVideo, WatchLaterVideo } = require('../models');
+var { SavedVideo } = require('../models');
 var { ORPHAN_VIDEOS_TTL_DAYS } = require('../config/constants');
 
 var CleanupService = {
@@ -60,13 +60,9 @@ var CleanupService = {
       where: {
         created_at: { [Op.lt]: ttlDate },
         id: {
-          [Op.notIn]: sequelize.literal(`(
-            SELECT video_id FROM starred_videos
-            UNION
-            SELECT video_id FROM watch_later_videos
-          )`)
+          [Op.notIn]: sequelize.literal(`(SELECT video_id FROM starred_videos UNION SELECT video_id FROM watch_later_videos)`)
         }
-      }
+      },
     });
 
     console.log('[CleanupService] Deleted', deletedCount, 'orphan videos older than', ORPHAN_VIDEOS_TTL_DAYS, 'days');
