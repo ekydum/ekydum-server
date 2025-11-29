@@ -2,12 +2,12 @@ var Joi = require('joi');
 var YtdlpService = require('../services/yt-service');
 var { ClientSettingsHelper } = require('../helpers/client-settings.helper');
 var ProxyHelper = require('../helpers/proxy.helper');
+var { GLOBAL_PAGE_SIZE } = require('../config/constants');
 
 var SearchController = {
   _schemaSearchVideos: Joi.object({
     q: Joi.string().required().min(1),
-    offset: Joi.number().integer().min(0).default(0),
-    limit: Joi.number().integer().min(1).max(50).default(20)
+    offset: Joi.number().integer().min(0).default(0)
   }),
 
   searchVideos: function () {
@@ -22,7 +22,7 @@ var SearchController = {
           next(error);
         } else {
           var [videos, settings] = await Promise.all([
-            YtdlpService.searchVideos(value.q, value.offset, value.limit, accountId),
+            YtdlpService.searchVideos(value.q, value.offset, GLOBAL_PAGE_SIZE, accountId),
             ClientSettingsHelper.getSettings(accountId)
           ]);
 

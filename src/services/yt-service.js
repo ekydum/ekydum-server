@@ -2,6 +2,8 @@ var CacheService = require('./cache-service');
 var { spawn } = require("child_process");
 var { ClientSettingsHelper } = require('../helpers/client-settings.helper');
 
+// TODO: rewrite all methods requiring accountId, use lang instead.
+
 var YtService = {
   _YT_BASE_URL: 'https://www.youtube.com',
 
@@ -138,6 +140,37 @@ var YtService = {
         )
       )(
         CacheService.keys.ytChannelVideos(ytChannelId, page, pageSize, lang)
+      )
+    );
+  },
+
+  /**
+   * TODO: This is a quick workaround to get a method accepting lang instead of accountID, the service needs to be rewritten.
+   * @param { string } ytChannelId
+   * @param { number } page
+   * @param { number } pageSize
+   * @param { string } lang
+   * @returns { Promise<{ items: YtVideoListItem[]; pagination: PaginationObject; }> }
+   */
+  getChannelVideos2: async function(ytChannelId, page, pageSize, lang) {
+    return YtService._cacheProxy(
+      CacheService.keys.ytChannelVideos(ytChannelId, page, pageSize, lang),
+      CacheService.TTL.CHANNEL_VIDEOS,
+      async () => YtService._paginatedResponse(
+        await YtService._ytQuery(
+          [
+            '--dump-json',
+            '--flat-playlist',
+            '--playlist-start', ((page - 1) * pageSize + 1).toString(),
+            '--playlist-end', (page * pageSize).toString(),
+            '--extractor-args', 'youtube:lang=' + lang,
+            this._YT_BASE_URL + '/channel/' + ytChannelId + '/videos'
+          ],
+          (item) => !!item,
+          (item) => YtService._mapVideoListItem(item)
+        ),
+        page,
+        pageSize
       )
     );
   },

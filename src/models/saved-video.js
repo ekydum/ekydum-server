@@ -10,8 +10,12 @@ var SavedVideo = sequelize.define('SavedVideo', {
   },
   yt_video_id: {
     type: DataTypes.STRING,
+    allowNull: false
+  },
+  lang: {
+    type: DataTypes.STRING(5),
     allowNull: false,
-    unique: true
+    defaultValue: 'en'
   },
   title: {
     type: DataTypes.STRING(500),
@@ -42,10 +46,16 @@ var SavedVideo = sequelize.define('SavedVideo', {
   indexes: [
     {
       unique: true,
-      fields: ['yt_video_id']
+      fields: ['yt_video_id', 'lang']
     },
     {
       fields: ['channel_id']
+    },
+    {
+      fields: ['lang']
+    },
+    {
+      fields: ['channel_id', 'created_at']
     }
   ]
 });
