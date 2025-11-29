@@ -1,15 +1,15 @@
 var cron = require('node-cron');
 var Bluebird = require('bluebird');
-var { Subscription, SavedChannel } = require('../models');
+var { Op } = require('sequelize');
+var { Subscription, SavedChannel, SavedVideo } = require('../models');
 var { ClientSettingsHelper } = require('../helpers/client-settings.helper');
-var CacheService = require('./cache-service');
 var YtService = require('./yt-service');
+var { GLOBAL_PAGE_SIZE, GLOBAL_CONCURRENCY } = require('../config/constants');
 
 var FeedService = {
   // Configuration
   _CRON_INTERVAL: '*/30 * * * *', // Every 30 minutes
   _PAGES_PER_CHANNEL: 1,
-  _CONCURRENCY: 3,
   _cronTask: null,
 
   /**
@@ -52,7 +52,6 @@ var FeedService = {
    * @returns {Promise<void>}
    */
   refreshAllFeeds: async function () {
-    var fetchedAt = Date.now();
     console.log('[FeedService] Starting feed refresh');
 
     // Get all unique channel+lang combinations from subscriptions
@@ -62,9 +61,9 @@ var FeedService = {
     await Bluebird.map(
       channelLangPairs,
       function (pair) {
-        return FeedService._refreshChannelVideos(pair.ytChannelId, pair.lang, fetchedAt);
+        return FeedService._refreshChannelVideos(pair.savedChannelId, pair.ytChannelId, pair.lang);
       },
-      { concurrency: FeedService._CONCURRENCY }
+      { concurrency: GLOBAL_CONCURRENCY }
     );
 
     console.log('[FeedService] Feed refresh completed');
@@ -81,13 +80,13 @@ var FeedService = {
     var settings = await ClientSettingsHelper.getSettings(accountId);
     var lang = settings.LANG || 'en';
 
-    // Get user's subscribed channels
+    // Get user's subscribed channels (SavedChannel IDs)
     var subscriptions = await Subscription.findAll({
       where: { account_id: accountId },
       include: [{
         model: SavedChannel,
         as: 'channel',
-        attributes: ['yt_channel_id']
+        attributes: ['id']
       }]
     });
 
@@ -99,35 +98,59 @@ var FeedService = {
     }
 
     var channelIds = subscriptions.map(function (sub) {
-      return sub.channel.yt_channel_id;
+      return sub.channel.id;
     });
 
-    // Collect videos from all channels
-    var allVideos = await FeedService._collectVideosFromChannels(channelIds, lang, pageSize);
-
-    // Sort by fetched_at DESC
-    allVideos.sort(function (a, b) {
-      return (b.fetched_at || 0) - (a.fetched_at || 0);
+    // Get videos from DB
+    var offset = (page - 1) * pageSize;
+    var videos = await SavedVideo.findAll({
+      where: {
+        channel_id: { [Op.in]: channelIds },
+        lang: lang
+      },
+      include: [{
+        model: SavedChannel,
+        as: 'channel',
+        attributes: ['yt_channel_id', 'name']
+      }],
+      order: [['created_at', 'DESC']],
+      limit: pageSize + 1, // +1 to check has_next
+      offset: offset
     });
 
-    // Paginate
-    var startIdx = (page - 1) * pageSize;
-    var endIdx = startIdx + pageSize;
-    var pageItems = allVideos.slice(startIdx, endIdx);
+    var hasNext = videos.length > pageSize;
+    if (hasNext) {
+      videos = videos.slice(0, pageSize);
+    }
+
+    // Map to YtVideoListItem format
+    var items = videos.map(function (v) {
+      return {
+        yt_id: v.yt_video_id,
+        title: v.title,
+        thumbnail: v.thumbnail,
+        thumbnail_src: v.thumbnail,
+        duration: v.duration,
+        channel_id: v.channel ? v.channel.yt_channel_id : null,
+        channel_name: v.channel ? v.channel.name : null,
+        upload_date: v.created_at ? v.created_at.toISOString() : null,
+        view_count: null
+      };
+    });
 
     return {
-      items: pageItems,
+      items: items,
       pagination: {
         page: page,
         page_size: pageSize,
-        has_next: allVideos.length > endIdx
+        has_next: hasNext
       }
     };
   },
 
   /**
    * Get all unique channel+lang pairs from all subscriptions
-   * @returns {Promise<Array<{ ytChannelId: string, lang: string }>>}
+   * @returns {Promise<Array<{ savedChannelId: string, ytChannelId: string, lang: string }>>}
    * @private
    */
   _getAllChannelLangPairs: async function () {
@@ -136,7 +159,7 @@ var FeedService = {
       include: [{
         model: SavedChannel,
         as: 'channel',
-        attributes: ['yt_channel_id']
+        attributes: ['id', 'yt_channel_id']
       }],
       attributes: ['account_id']
     });
@@ -148,7 +171,10 @@ var FeedService = {
       if (!accountChannels[accountId]) {
         accountChannels[accountId] = [];
       }
-      accountChannels[accountId].push(sub.channel.yt_channel_id);
+      accountChannels[accountId].push({
+        savedChannelId: sub.channel.id,
+        ytChannelId: sub.channel.yt_channel_id
+      });
     });
 
     // Get unique channel+lang pairs
@@ -162,10 +188,14 @@ var FeedService = {
         var lang = settings.LANG || 'en';
         var channels = accountChannels[accountId];
 
-        channels.forEach(function (ytChannelId) {
-          var key = ytChannelId + ':' + lang;
+        channels.forEach(function (ch) {
+          var key = ch.ytChannelId + ':' + lang;
           if (!pairsMap[key]) {
-            pairsMap[key] = { ytChannelId: ytChannelId, lang: lang };
+            pairsMap[key] = {
+              savedChannelId: ch.savedChannelId,
+              ytChannelId: ch.ytChannelId,
+              lang: lang
+            };
           }
         });
       },
@@ -176,34 +206,26 @@ var FeedService = {
   },
 
   /**
-   * Refresh videos for a specific channel
-   * @param {string} ytChannelId
+   * Refresh videos for a specific channel and save to DB
+   * @param {string} savedChannelId - UUID of SavedChannel
+   * @param {string} ytChannelId - YouTube channel ID
    * @param {string} lang
-   * @param {number} fetchedAt
    * @returns {Promise<void>}
    * @private
    */
-  _refreshChannelVideos: async function (ytChannelId, lang, fetchedAt) {
+  _refreshChannelVideos: async function (savedChannelId, ytChannelId, lang) {
     try {
-      var pageSize = 30; // Default page size for cron
-
       for (var page = 1; page <= FeedService._PAGES_PER_CHANNEL; page++) {
-        // getChannelVideos2 caches internally, but we need to add fetched_at
-        // So we invalidate cache first to force fresh fetch
-        var cacheKey = CacheService.keys.ytChannelVideos(ytChannelId, page, pageSize, lang);
-        await CacheService.del(cacheKey);
+        var result = await YtService.getChannelVideos2(ytChannelId, page, GLOBAL_PAGE_SIZE, lang);
 
-        var result = await YtService.getChannelVideos2(ytChannelId, page, pageSize, lang);
-
-        // Add fetched_at to each video and re-cache
-        var videosWithTimestamp = result.items.map(function (video) {
-          return Object.assign({}, video, { fetched_at: fetchedAt });
-        });
-
-        await CacheService.set(cacheKey, {
-          items: videosWithTimestamp,
-          pagination: result.pagination
-        }, CacheService.TTL.CHANNEL_VIDEOS);
+        // Save each video to DB
+        await Bluebird.map(
+          result.items,
+          function (video) {
+            return FeedService._saveVideo(video, savedChannelId, lang);
+          },
+          { concurrency: 5 }
+        );
       }
     } catch (err) {
       console.error('[FeedService] Failed to refresh channel', ytChannelId, ':', err.message);
@@ -211,72 +233,31 @@ var FeedService = {
   },
 
   /**
-   * Collect videos from multiple channels (with fallback fetch)
-   * @param {string[]} channelIds
+   * Save a video to DB (findOrCreate)
+   * @param {YtVideoListItem} video
+   * @param {string} savedChannelId
    * @param {string} lang
-   * @param {number} pageSize
-   * @returns {Promise<YtVideoListItem[]>}
+   * @returns {Promise<void>}
    * @private
    */
-  _collectVideosFromChannels: async function (channelIds, lang, pageSize) {
-    var allVideos = [];
-    var fetchedAt = Date.now();
-
-    await Bluebird.map(
-      channelIds,
-      async function (ytChannelId) {
-        var videos = await FeedService._getChannelVideosWithFallback(
-          ytChannelId,
-          lang,
-          pageSize,
-          fetchedAt
-        );
-        videos.forEach(function (v) {
-          allVideos.push(v);
-        });
-      },
-      { concurrency: FeedService._CONCURRENCY }
-    );
-
-    return allVideos;
-  },
-
-  /**
-   * Get channel videos from cache or fetch on-the-fly
-   * @param {string} ytChannelId
-   * @param {string} lang
-   * @param {number} pageSize
-   * @param {number} fetchedAt
-   * @returns {Promise<YtVideoListItem[]>}
-   * @private
-   */
-  _getChannelVideosWithFallback: async function (ytChannelId, lang, pageSize, fetchedAt) {
-    var page = 1;
-    var cacheKey = CacheService.keys.ytChannelVideos(ytChannelId, page, pageSize, lang);
-    var cached = await CacheService.get(cacheKey);
-
-    if (cached && cached.items) {
-      return cached.items;
-    }
-
-    // Fallback: fetch on-the-fly via YtService
+  _saveVideo: async function (video, savedChannelId, lang) {
     try {
-      var result = await YtService.getChannelVideos2(ytChannelId, page, pageSize, lang);
-
-      var videosWithTimestamp = result.items.map(function (video) {
-        return Object.assign({}, video, { fetched_at: fetchedAt });
+      await SavedVideo.findOrCreate({
+        where: {
+          yt_video_id: video.yt_id,
+          lang: lang
+        },
+        defaults: {
+          yt_video_id: video.yt_id,
+          lang: lang,
+          title: video.title,
+          thumbnail: video.thumbnail_src || video.thumbnail,
+          duration: video.duration || null,
+          channel_id: savedChannelId
+        }
       });
-
-      // Re-cache with fetched_at
-      await CacheService.set(cacheKey, {
-        items: videosWithTimestamp,
-        pagination: result.pagination
-      }, CacheService.TTL.CHANNEL_VIDEOS);
-
-      return videosWithTimestamp;
     } catch (err) {
-      console.error('[FeedService] Failed to fetch channel', ytChannelId, ':', err.message);
-      return [];
+      console.error('[FeedService] Failed to save video', video.yt_id, ':', err.message, err.errors || '');
     }
   },
 };

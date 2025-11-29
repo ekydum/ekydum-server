@@ -11,8 +11,9 @@ module.exports = {
       defaultValue: 'en'
     });
 
-    // 2. Remove old unique index on yt_video_id only
-    await queryInterface.removeIndex('saved_videos', 'saved_videos_yt_video_id_unique');
+    // 2. Remove old unique constraint on yt_video_id only
+    // The constraint was created as column-level unique, not as a named index
+    await queryInterface.removeConstraint('saved_videos', 'saved_videos_yt_video_id_key');
 
     // 3. Add new composite unique index on yt_video_id + lang
     await queryInterface.addIndex('saved_videos', ['yt_video_id', 'lang'], {
@@ -37,10 +38,11 @@ module.exports = {
     await queryInterface.removeIndex('saved_videos', 'saved_videos_lang_idx');
     await queryInterface.removeIndex('saved_videos', 'saved_videos_yt_video_id_lang_unique');
 
-    // Restore old unique index
-    await queryInterface.addIndex('saved_videos', ['yt_video_id'], {
-      unique: true,
-      name: 'saved_videos_yt_video_id_unique'
+    // Restore old unique constraint
+    await queryInterface.addConstraint('saved_videos', {
+      fields: ['yt_video_id'],
+      type: 'unique',
+      name: 'saved_videos_yt_video_id_key'
     });
 
     // Remove lang column
