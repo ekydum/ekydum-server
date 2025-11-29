@@ -72,6 +72,32 @@ var SubscriptionsController = {
     };
   },
 
+  checkSubscription: function () {
+    return async function (req, res, next) {
+      try {
+        var ytChannelId = req.params.yt_channel_id;
+        var accountId = req.account.id;
+
+        var sub = await Subscription.findOne({
+          where: { account_id: accountId },
+          include: [{
+            model: SavedChannel,
+            as: 'channel',
+            where: { yt_channel_id: ytChannelId },
+            attributes: ['yt_channel_id', 'name']
+          }]
+        });
+
+        res.json({
+          subscribed: !!sub,
+          subscription_id: sub?.id || null
+        });
+      } catch (err) {
+        next(err);
+      }
+    };
+  },
+
   unsubscribe: function () {
     return async function(req, res, next) {
       try {
