@@ -15,6 +15,7 @@ var playlistsRoutes = require('./routes/playlists');
 var starredRoutes = require('./routes/starred');
 var watchLaterRoutes = require('./routes/watch-later');
 var quickConnectRoutes = require('./routes/quick-connect');
+var feedRoutes = require('./routes/feed');
 
 var app = express();
 
@@ -55,6 +56,7 @@ app.use('/me', meRoutes);
 app.use('/relay', relayRoutes);
 app.use('/starred', starredRoutes);
 app.use('/watch-later', watchLaterRoutes);
+app.use('/feed', feedRoutes);
 
 // 404 handler
 app.use(systemController.err404());
