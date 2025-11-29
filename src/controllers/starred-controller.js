@@ -1,6 +1,6 @@
 var Joi = require('joi');
 var { StarredVideo, SavedVideo, SavedChannel } = require('../models');
-const { ClientSettingsHelper } = require('../helpers/client-settings.helper');
+var { ClientSettingsHelper } = require('../helpers/client-settings.helper');
 var ProxyHelper = require('../helpers/proxy.helper');
 
 var StarredController = {
@@ -68,6 +68,9 @@ var StarredController = {
           error.isJoi = true;
           next(error);
         } else {
+          var settings = await ClientSettingsHelper.getSettings(req.account.id);
+          var lang = settings.LANG || 'en';
+
           var savedChannelId = null;
           if (value.yt_channel_id) {
             var [savedChannel] = await SavedChannel.findOrCreate({
@@ -81,9 +84,13 @@ var StarredController = {
           }
 
           var [savedVideo] = await SavedVideo.findOrCreate({
-            where: { yt_video_id: value.yt_video_id },
+            where: {
+              yt_video_id: value.yt_video_id,
+              lang: lang
+            },
             defaults: {
               yt_video_id: value.yt_video_id,
+              lang: lang,
               title: value.title,
               thumbnail: value.thumbnail || null, // src thumbnail
               duration: value.duration || null,
@@ -115,8 +122,14 @@ var StarredController = {
     return async function(req, res, next) {
       try {
         var ytVideoId = req.params.yt_video_id;
+        var settings = await ClientSettingsHelper.getSettings(req.account.id);
+        var lang = settings.LANG || 'en';
+
         var savedVideo = await SavedVideo.findOne({
-          where: { yt_video_id: ytVideoId }
+          where: {
+            yt_video_id: ytVideoId,
+            lang: lang
+          }
         });
         // TODO: the saved video needs a cleanup if it has no references
 
@@ -148,8 +161,14 @@ var StarredController = {
 
       try {
         var ytVideoId = req.params.yt_video_id;
+        var settings = await ClientSettingsHelper.getSettings(req.account.id);
+        var lang = settings.LANG || 'en';
+
         var savedVideo = await SavedVideo.findOne({
-          where: { yt_video_id: ytVideoId }
+          where: {
+            yt_video_id: ytVideoId,
+            lang: lang
+          }
         });
 
         if (savedVideo) {
