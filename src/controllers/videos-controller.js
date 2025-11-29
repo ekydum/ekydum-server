@@ -15,6 +15,8 @@ var VideosController = {
           ClientSettingsHelper.getSettings(accountId)
         ]);
 
+        ProxyHelper.wrapVideoFormats(req, videoInfo, token);
+
         var shouldProxyThumbnails = +settings.RELAY_PROXY_THUMBNAILS === 1;
         if (shouldProxyThumbnails && videoInfo?.thumbnail) {
           videoInfo.thumbnail = ProxyHelper.wrapUrl(ProxyHelper.ENDPOINT_IMG, req, videoInfo.thumbnail, token);
