@@ -1,7 +1,8 @@
 var Joi = require('joi');
-var { WatchLaterVideo, SavedVideo, SavedChannel } = require('../models');
+var { WatchLaterVideo, SavedVideo, SavedChannel, StarredVideo } = require('../models');
 var { ClientSettingsHelper } = require('../helpers/client-settings.helper');
 var ProxyHelper = require('../helpers/proxy.helper');
+var { Op } = require('sequelize');
 
 var WatchLaterController = {
   _schemaAddWatchLater: Joi.object({
@@ -20,11 +21,11 @@ var WatchLaterController = {
         var token = req.account.token;
         var [watchLater, settings] = await Promise.all([
           WatchLaterVideo.findAll({
-            where: { account_id: req.account.id },
+            where: { account_id: accountId },
             include: [{
               model: SavedVideo,
               as: 'video',
-              attributes: ['yt_video_id', 'title', 'thumbnail', 'duration'],
+              attributes: ['id', 'yt_video_id', 'title', 'thumbnail', 'duration'],
               include: [{
                 model: SavedChannel,
                 as: 'channel',
@@ -37,6 +38,23 @@ var WatchLaterController = {
         ]);
         var shouldProxyThumbnails = +settings.RELAY_PROXY_THUMBNAILS === 1;
 
+        // Get starred status for these videos
+        var videoIds = watchLater.map(function(w) {
+          return w.video.id;
+        });
+
+        var starredVideos = await StarredVideo.findAll({
+          where: {
+            account_id: accountId,
+            video_id: { [Op.in]: videoIds }
+          },
+          attributes: ['video_id']
+        });
+
+        var starredSet = new Set(starredVideos.map(function(s) {
+          return s.video_id;
+        }));
+
         var result = watchLater.map(function(w) {
           /** @type { YtVideoListItem } */
           var obj = {
@@ -47,7 +65,9 @@ var WatchLaterController = {
             duration: w.video.duration,
             channel_id: w.video.channel ? w.video.channel.yt_channel_id : null,
             channel_name: w.video.channel ? w.video.channel.name : null,
-            created_at: w.created_at
+            created_at: w.created_at,
+            is_watch_later: true,
+            is_starred: starredSet.has(w.video.id)
           };
           return shouldProxyThumbnails ? ProxyHelper.wrapObjectThumbnail(req, obj, token) : obj;
         });

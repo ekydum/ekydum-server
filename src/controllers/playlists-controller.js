@@ -1,5 +1,6 @@
 var Joi = require('joi');
 var YtdlpService = require('../services/yt-service');
+var VideoEnrichmentService = require('../services/video-enrichment.service');
 var { ClientSettingsHelper } = require('../helpers/client-settings.helper');
 var ProxyHelper = require('../helpers/proxy.helper');
 var { GLOBAL_PAGE_SIZE } = require('../config/constants');
@@ -29,6 +30,9 @@ var PlaylistsController = {
             YtdlpService.getPlaylistVideos(ytPlaylistId, value.page, GLOBAL_PAGE_SIZE, accountId),
             ClientSettingsHelper.getSettings(accountId),
           ]);
+
+          // Enrich with watch later / starred flags
+          result.items = await VideoEnrichmentService.enrichVideos(result.items, accountId);
 
           var shouldProxyThumbnails = +settings.RELAY_PROXY_THUMBNAILS === 1;
           if (shouldProxyThumbnails && Array.isArray(result.items)) {
