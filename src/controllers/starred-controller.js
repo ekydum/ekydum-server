@@ -1,7 +1,8 @@
 var Joi = require('joi');
-var { StarredVideo, SavedVideo, SavedChannel } = require('../models');
+var { StarredVideo, SavedVideo, SavedChannel, WatchLaterVideo } = require('../models');
 var { ClientSettingsHelper } = require('../helpers/client-settings.helper');
 var ProxyHelper = require('../helpers/proxy.helper');
+var { Op } = require('sequelize');
 
 var StarredController = {
   _schemaAddStarred: Joi.object({
@@ -25,7 +26,7 @@ var StarredController = {
             include: [{
               model: SavedVideo,
               as: 'video',
-              attributes: ['yt_video_id', 'title', 'thumbnail', 'duration'],
+              attributes: ['id', 'yt_video_id', 'title', 'thumbnail', 'duration'],
               include: [{
                 model: SavedChannel,
                 as: 'channel',
@@ -38,6 +39,23 @@ var StarredController = {
         ]);
         var shouldProxyThumbnails = +settings.RELAY_PROXY_THUMBNAILS === 1;
 
+        // Get watch later status for these videos
+        var videoIds = starred.map(function(s) {
+          return s.video.id;
+        });
+
+        var watchLaterVideos = await WatchLaterVideo.findAll({
+          where: {
+            account_id: accountId,
+            video_id: { [Op.in]: videoIds }
+          },
+          attributes: ['video_id']
+        });
+
+        var watchLaterSet = new Set(watchLaterVideos.map(function(wl) {
+          return wl.video_id;
+        }));
+
         var result = starred.map(function(s) {
           /** @type { YtVideoListItem } */
           var obj = {
@@ -49,6 +67,8 @@ var StarredController = {
             channel_id: s.video.channel ? s.video.channel.yt_channel_id : null,
             channel_name: s.video.channel ? s.video.channel.name : null,
             created_at: s.created_at,
+            is_starred: true,
+            is_watch_later: watchLaterSet.has(s.video.id)
           };
           return shouldProxyThumbnails ? ProxyHelper.wrapObjectThumbnail(req, obj, token) : obj;
         });

@@ -8,4 +8,7 @@ export interface YtVideoListItem {
   channel_name: string;
   channel_id: string;
   upload_date: string; // N/A
+
+  is_watch_later?: boolean;
+  is_starred?: boolean;
 }
