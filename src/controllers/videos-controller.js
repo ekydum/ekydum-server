@@ -28,6 +28,19 @@ var VideosController = {
       }
     };
   },
+
+  preCacheVideo: function () {
+    return async function(req, res, next) {
+      try {
+        var ytVideoId = req.params.yt_video_id;
+        var accountId = req.account.id;
+        await YtdlpService.getVideoInfo(ytVideoId, accountId);
+        res.json({ success: true });
+      } catch (err) {
+        next(err);
+      }
+    };
+  },
 };
 
 module.exports = VideosController;
