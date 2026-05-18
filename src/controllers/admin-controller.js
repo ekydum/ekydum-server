@@ -163,7 +163,7 @@ var AdminController = {
   getAllLoginRequests: function () {
     return async function(req, res, next) {
       try {
-        var keys = await CacheService.getKeys('login_request:*');
+        var keys = await CacheService.getKeys(CacheService.keys.qcLoginRequest('*'));
         var requests = [];
         for (var key of keys) {
           var request = await CacheService.get(key);
