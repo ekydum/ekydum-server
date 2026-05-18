@@ -1,8 +1,6 @@
 require('dotenv').config();
 var app = require('./app');
 var { syncDatabase } = require('./models');
-var FeedService = require('./services/feed-service');
-var CleanupService = require('./services/cleanup-service');
 
 var PORT = process.env.PORT || 3000;
 var server = null;
@@ -16,9 +14,6 @@ if (!process.env.ADMIN_TOKEN || process.env.ADMIN_TOKEN.length < 128) {
 // Graceful shutdown handler
 function gracefulShutdown(signal) {
   console.log('\n' + signal + ' received, shutting down gracefully...');
-
-  FeedService.stopCron();
-  CleanupService.stopCron();
 
   if (server) {
     server.close(function () {
@@ -46,10 +41,6 @@ async function startServer() {
     server = app.listen(PORT, function() {
       console.log('Server is running on port ' + PORT);
       console.log('Environment: ' + process.env.NODE_ENV);
-
-      // Start cron jobs after server is ready
-      FeedService.startCron();
-      CleanupService.startCron();
     });
   } catch (error) {
     console.error('Failed to start server:', error);
