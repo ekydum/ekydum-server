@@ -304,7 +304,11 @@ var YtService = {
             proc.on('close', (code) => { (code !== 0 && stderr.includes('ERROR')) ? rj(new Error(stderr)) : rs(stdout); });
             proc.on('error', (err) => { rj(err); });
           })(
-            spawn('yt-dlp', args, { maxBuffer: 10485760 }),
+            spawn('yt-dlp', [
+              '--js-runtimes', 'node',
+              '--remote-components', 'ejs:github',
+              ...args
+            ], { maxBuffer: 10485760 }),
             '',
             '',
             resolve,
