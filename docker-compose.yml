@@ -45,6 +45,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - ADMIN_TOKEN=${ADMIN_TOKEN}
       - CORS_ORIGIN=${CORS_ORIGIN}
+      - YT_DLP_COOKIES_FILE=${YT_DLP_COOKIES_FILE:-}
     depends_on:
       postgres:
         condition: service_healthy
