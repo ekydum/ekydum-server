@@ -1,6 +1,7 @@
 var CacheService = require('./cache-service');
 var { spawn } = require("child_process");
 var { ClientSettingsHelper } = require('../helpers/client-settings.helper');
+var fs = require('fs');
 
 // TODO: rewrite all methods requiring accountId, use lang instead.
 
@@ -298,6 +299,7 @@ var YtService = {
     return YtService.__try(
       async () => (
         new Promise((resolve, reject) => {
+          var cookieArgs = YtService._getCookieArgs();
           ((proc, stdout, stderr, rs, rj) => {
             proc.stdout.on('data', (data) => { stdout += data.toString(); });
             proc.stderr.on('data', (data) => { stderr += data.toString(); });
@@ -307,6 +309,7 @@ var YtService = {
             spawn('yt-dlp', [
               '--js-runtimes', 'node',
               '--remote-components', 'ejs:github',
+              ...cookieArgs,
               ...args
             ], { maxBuffer: 10485760 }),
             '',
@@ -318,6 +321,24 @@ var YtService = {
       ),
       (e) => (new Error('Failed to execute yt-dlp: ' + e.message))
     );
+  },
+
+  /**
+   * @returns { string[] }
+   * @private
+   */
+  _getCookieArgs: function() {
+    var cookieFile = process.env.YT_DLP_COOKIES_FILE;
+    if (!cookieFile) {
+      return [];
+    }
+
+    if (!fs.existsSync(cookieFile)) {
+      console.warn('YT_DLP_COOKIES_FILE is set but file does not exist:', cookieFile);
+      return [];
+    }
+
+    return ['--cookies', cookieFile];
   },
 
   /**
